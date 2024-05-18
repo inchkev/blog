@@ -1,0 +1,30 @@
+[package]
+name = "blog"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+markdown = "1.0.0-alpha.17"
+anyhow = "1.0"
+
+[lints.clippy]
+
+# Allowed defaults that we should escalate on
+todo = "warn"                           # Warn on todo!
+# print_stdout = "warn"                   # Warn on println! (allowed in tests)
+# print_stderr = "warn"                   # Warn on eprintln! (allowed in tests)
+dbg_macro = "warn"                      # Warn on dbg! (allowed in tests)
+panic = "deny"                          # Don't allow panic! (allowed in tests)
+panic_in_result_fn = "deny"             # Check usage of panic! in a function of type Result
+fallible_impl_from = "deny"             # Checks for impls of `From<..>` that contain `panic!()` or `unwrap()`
+undocumented_unsafe_blocks = "deny"     # Checks for `unsafe` blocks and impls without a `// SAFETY:` comment
+# unwrap_used = "warn"                    # Warn on unwrap/_err() (allowed in tests)
+expect_used = "warn"                    # Warn on expect/_err() (allowed in tests)
+
+# Mostly stylistic/pedantic
+empty_line_after_doc_comments = "warn"  # Checks for empty lines after documentation comments
+default_trait_access = "warn"           # Checks for literal calls to `Default::default()`
+enum_glob_use = "warn"                  # Checks for `use Enum::*`
+unnecessary_safety_doc = "warn"         # Regular (safe) functions don't need a `# Safety` section
+cloned_instead_of_copied = "warn"       # Checks for when `copied()` could be used instead of `cloned()`
+unnested_or_patterns = "warn"           # Checks for unnested or-patterns: `Some(0) | Some(2) -> Some(0 | 2)`
