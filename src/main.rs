@@ -9,6 +9,7 @@ use std::{
 use anyhow::{Context, Result};
 use gray_matter::{engine::YAML, Matter};
 use lazy_static::lazy_static;
+use regex::Regex;
 use serde::Deserialize;
 use tinytemplate::TinyTemplate;
 use walkdir::WalkDir;
@@ -29,6 +30,39 @@ struct FrontMatter {
     date: String,
     slug: Option<String>,
     draft: bool,
+}
+
+// Function to extract image references from markdown content
+fn extract_image_references(content: &str) -> Vec<String> {
+    let re = Regex::new("!\\[[^\\]]*\\]\\(([^\\)]+)\\)").unwrap();
+    re.captures_iter(content)
+        .map(|capture| capture[1].to_string())
+        .collect()
+}
+
+// Function to copy referenced images to the website directory
+fn copy_images(image_references: &[String]) -> Result<()> {
+    for image_reference in image_references {
+        let image_path = CONTENT_DIR.join(image_reference);
+        let file_name = image_path.file_name().unwrap();
+        let destination_path = WEBSITE_DIR.join(file_name);
+        fs::copy(image_path, &destination_path)?;
+    }
+    Ok(())
+}
+
+// Function to update image references in HTML content
+fn update_image_references(html_content: &str, image_references: &[String]) -> String {
+    let mut updated_content = html_content.to_string();
+    for image_reference in image_references {
+        let file_name = Path::new(&image_reference)
+            .file_name()
+            .unwrap()
+            .to_string_lossy();
+        let new_image_path = format!("{}{}", "website/", file_name);
+        updated_content = updated_content.replace(image_reference, &new_image_path);
+    }
+    updated_content
 }
 
 fn main() -> Result<()> {
@@ -55,6 +89,12 @@ fn main() -> Result<()> {
             // }
 
             let contents = result.content;
+
+            // Extract image references from the markdown content
+            let image_references = extract_image_references(&contents);
+
+            // Copy referenced images to the website directory
+            copy_images(&image_references)?;
 
             let html_contents = markdown::to_html_with_options(
                 &contents,
