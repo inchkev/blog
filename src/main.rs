@@ -1,4 +1,5 @@
 use std::{
+    collections::HashMap,
     ffi::OsStr,
     fs::{self, File},
     io::Write,
@@ -80,7 +81,7 @@ fn main() -> Result<()> {
             });
 
             let post_context = {
-                let mut context = std::collections::HashMap::new();
+                let mut context = HashMap::new();
                 context.insert("title", front_matter.title.clone());
                 context.insert("slug", slug.clone());
                 context.insert("date", front_matter.date.clone());
@@ -100,7 +101,7 @@ fn main() -> Result<()> {
     }
 
     let index_context = {
-        let mut context = std::collections::HashMap::new();
+        let mut context = HashMap::new();
         context.insert("posts", posts);
         context
     };

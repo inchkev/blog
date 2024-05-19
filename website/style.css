@@ -10,13 +10,16 @@ body {
   overflow-x: scroll;
 }
 
-main {
+body {
   box-sizing: border-box;
   padding: 1.5em;
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-size: 1em;
   font-weight: normal;
   color: #53A82C;
+}
+
+h3, h4, h5, h6 {
+  font-size: 1em;
 }
