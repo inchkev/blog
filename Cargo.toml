@@ -6,6 +6,11 @@ edition = "2021"
 [dependencies]
 markdown = "1.0.0-alpha.17"
 anyhow = "1.0"
+tinytemplate = "1.2.1"
+serde = { version = "1.0.202", features = ["derive"] }
+lazy_static = "1.4.0"
+gray_matter = "0.2.7"
+walkdir = "2.5.0"
 
 [lints.clippy]
 
