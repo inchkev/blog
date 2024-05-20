@@ -42,6 +42,11 @@ struct FrontMatter {
     draft: bool,
 }
 
+fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
+    let size = imagesize::size(path)?;
+    Ok(size)
+}
+
 fn enhance_media_and_update_html(html: &str) -> String {
     let mut fragment = Html::parse_document(html);
     let image_selector = Selector::parse("img").unwrap();
@@ -51,12 +56,10 @@ fn enhance_media_and_update_html(html: &str) -> String {
         let Some(src) = image_element.attr("src") else {
             continue;
         };
-        // let a: TreeSink = fragment.into();
-
         // fragment.remove_from_parent(&image_element);
-        let id = image_element.id();
-        let mut tree = fragment.tree;
-        let _ = tree.get_mut(id).unwrap().detach();
+        // let id = image_element.id();
+
+        // let mut tree = fragment.tree.get_mut(id).unwrap().detach();
 
         let image_path = CONTENT_DIR.join(src);
         let destination_path = WEBSITE_DIR.join(src);
@@ -64,6 +67,35 @@ fn enhance_media_and_update_html(html: &str) -> String {
     }
     fragment.html()
 }
+
+fn enhance_media_and_update_html2(html: &str) -> String {
+    use kuchikiki::{traits::*, NodeRef};
+    let document = kuchikiki::parse_html().one(html);
+
+    for img_tag in document.select("img").unwrap() {
+        let img_src = {
+            let attributes = img_tag.attributes.borrow();
+            attributes.get("src").unwrap_or_default().to_owned()
+        };
+
+        let mut attributes_mut = img_tag.attributes.borrow_mut();
+
+        attributes_mut.insert("srcset", img_src.to_owned());
+        attributes_mut.insert("sizes", img_src.to_owned());
+
+        if let Ok(img_dims) = get_image_dims(CONTENT_DIR.join(&img_src)) {
+            attributes_mut.insert("width", img_dims.width.to_string());
+            attributes_mut.insert("height", img_dims.height.to_string());
+        }
+
+        dbg!(&img_src);
+    }
+    document.to_string()
+}
+
+// fn enhance_media_and_update_html2(html: &str) -> String {
+
+// }
 
 // fn test() {
 //     let html = "<html><body>hello<p class=\"hello\">REMOVE ME</p></body></html>";
@@ -111,7 +143,9 @@ fn main() -> Result<()> {
                 markdown::to_html_with_options(&contents, &markdown::Options::gfm()).unwrap();
 
             // copy images
-            let html_contents = enhance_media_and_update_html(&html_contents);
+            // let html_contents = enhance_media_and_update_html(&html_contents);
+            let html_contents = enhance_media_and_update_html2(&html_contents);
+            dbg!(&html_contents);
 
             let slug = front_matter
                 .slug
@@ -128,8 +162,10 @@ fn main() -> Result<()> {
                 tera().render("page.html", &tera::Context::from_serialize(&post_context)?)?;
 
             let output_path = WEBSITE_DIR.join(format!("{}.html", slug));
-            let mut output_file = File::create(output_path)?;
-            output_file.write_all(rendered.as_bytes())?;
+            println!("\nWriting to {:?}", output_path);
+            println!("{}", rendered);
+            // let mut output_file = File::create(output_path)?;
+            // output_file.write_all(rendered.as_bytes())?;
 
             posts.push(post_context);
         }
@@ -140,8 +176,10 @@ fn main() -> Result<()> {
     let rendered = tera().render("index.html", &tera::Context::from_serialize(index_context)?)?;
 
     let index_path = WEBSITE_DIR.join("index.html");
-    let mut index_file = File::create(index_path)?;
-    index_file.write_all(rendered.as_bytes())?;
+    // println!("\nWriting to {:?}", index_path);
+    // println!("{}", rendered);
+    // let mut index_file = File::create(index_path)?;
+    // index_file.write_all(rendered.as_bytes())?;
 
     Ok(())
 }
