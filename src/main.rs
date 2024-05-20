@@ -9,12 +9,13 @@ use std::{
 
 use anyhow::Result;
 use gray_matter::{engine::YAML, Matter};
-use html5ever::tree_builder::TreeSink;
 use lazy_static::lazy_static;
-use scraper::{Html, Selector};
 use serde::Deserialize;
 use tera::Tera;
 use walkdir::WalkDir;
+
+use html5ever::tree_builder::TreeSink;
+use scraper::{Html, Selector};
 
 lazy_static! {
     static ref CONTENT_DIR: &'static Path = Path::new("content");
@@ -50,8 +51,12 @@ fn enhance_media_and_update_html(html: &str) -> String {
         let Some(src) = image_element.attr("src") else {
             continue;
         };
+        // let a: TreeSink = fragment.into();
 
         // fragment.remove_from_parent(&image_element);
+        let id = image_element.id();
+        let mut tree = fragment.tree;
+        let _ = tree.get_mut(id).unwrap().detach();
 
         let image_path = CONTENT_DIR.join(src);
         let destination_path = WEBSITE_DIR.join(src);
