@@ -6,7 +6,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-  <title>{title} - Kevin's blog</title>
+  <title>{{ title }} - Kevin's blog</title>
   <link rel="shortcut icon" type="image/png" href="/favicon.png">
 
   <meta name="description" content="Kevin's blog">
@@ -21,15 +21,15 @@
   <main>
     <h1>Kevin's blog</h1>
 
-    <h1>{ title }</h1>
+    <h1>{{ title }}</h1>
 
     <header>
-      <p>{ date }</p>
+      <p>{{ date }}</p>
       <p>{# word_length #}</p>
     </header>
 
     <div class="contents">
-      { contents | unescaped }
+      {{ contents }}
     </div>
   </main>
 
