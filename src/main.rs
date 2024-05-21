@@ -12,12 +12,17 @@ use gray_matter::{engine::YAML, Matter};
 use kuchikiki::traits::*;
 use lazy_static::lazy_static;
 use serde::Deserialize;
+use syntect::{
+    html::{ClassStyle, ClassedHTMLGenerator},
+    util::LinesWithEndings,
+};
 use tera::Tera;
 use walkdir::WalkDir;
 
 lazy_static! {
     static ref CONTENT_DIR: &'static Path = Path::new("content");
     static ref TEMPLATE_DIR: &'static Path = Path::new("templates");
+    static ref THEME_DIR: &'static Path = Path::new("themes");
     static ref WEBSITE_DIR: &'static Path = Path::new("website");
 }
 
@@ -28,6 +33,16 @@ fn tera() -> &'static Tera {
         tera.autoescape_on(vec![]);
         tera
     })
+}
+
+fn ss() -> &'static syntect::parsing::SyntaxSet {
+    static PS: OnceLock<syntect::parsing::SyntaxSet> = OnceLock::new();
+    PS.get_or_init(syntect::parsing::SyntaxSet::load_defaults_newlines)
+}
+
+fn ts() -> &'static syntect::highlighting::ThemeSet {
+    static PS: OnceLock<syntect::highlighting::ThemeSet> = OnceLock::new();
+    PS.get_or_init(|| syntect::highlighting::ThemeSet::load_from_folder(THEME_DIR.clone()).unwrap())
 }
 
 #[derive(Deserialize)]
@@ -43,7 +58,6 @@ struct FrontMatter {
 fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
     let size = imagesize::size(path)?;
     Ok(size)
-    // create directory for page
 }
 
 fn copy_media_and_update_source<P: AsRef<Path>>(html: &str, move_dir: P) -> String {
@@ -76,6 +90,59 @@ fn copy_media_and_update_source<P: AsRef<Path>>(html: &str, move_dir: P) -> Stri
     document.to_string()
 }
 
+fn html_syntax_highlight(html: &str) -> String {
+    let document = kuchikiki::parse_html().one(html);
+
+    for code_tag in document.select("pre code").unwrap() {
+        let Some(class) = ({
+            let attributes = code_tag.attributes.borrow();
+            attributes.get("class").map(|s| s.to_owned())
+        }) else {
+            continue;
+        };
+
+        let Some(language) = class.split_once('-').map(|p| p.1.to_owned()) else {
+            continue;
+        };
+
+        let code = code_tag.text_contents();
+        // dbg!(&language);
+
+        let syntax = ss()
+            .find_syntax_by_token(&language)
+            .unwrap_or_else(|| ss().find_syntax_plain_text());
+
+        let mut html_generator =
+            ClassedHTMLGenerator::new_with_class_style(syntax, ss(), ClassStyle::Spaced);
+        for line in LinesWithEndings::from(&code) {
+            html_generator
+                .parse_html_for_line_which_includes_newline(line)
+                .unwrap();
+        }
+
+        let output_html = html_generator.finalize();
+        let snippet = kuchikiki::parse_html().one(output_html);
+
+        let node = code_tag.as_node().first_child().unwrap();
+        if let Some(text) = node.as_text() {
+            "".clone_into(&mut text.borrow_mut());
+        }
+        node.insert_after(snippet);
+    }
+    document.to_string()
+}
+
+fn load_syntax_theme(theme: &str) -> Result<()> {
+    let theme = &ts().themes[theme];
+    let css = syntect::html::css_for_theme_with_class_style(theme, ClassStyle::Spaced)?;
+
+    let css_path = WEBSITE_DIR.join("syntax.css");
+    let mut css_file = File::create(css_path)?;
+    css_file.write_all(css.as_bytes())?;
+
+    Ok(())
+}
+
 fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
     path.as_ref()
         .file_stem()
@@ -104,8 +171,9 @@ fn main() -> Result<()> {
 
             let contents = result.content;
 
-            let html_contents =
-                markdown::to_html_with_options(&contents, &markdown::Options::gfm()).unwrap();
+            let mut options = markdown::Options::gfm();
+            options.compile.allow_dangerous_html = true;
+            let html_contents = markdown::to_html_with_options(&contents, &options).unwrap();
 
             // copy images
             // let html_contents = enhance_media_and_update_html(&html_contents);
@@ -122,6 +190,7 @@ fn main() -> Result<()> {
 
             // copy images
             let html_contents = copy_media_and_update_source(&html_contents, &page_dir);
+            let html_contents = html_syntax_highlight(&html_contents);
 
             let post_context = HashMap::from([
                 ("title", front_matter.title.clone()),
@@ -148,6 +217,8 @@ fn main() -> Result<()> {
     let index_path = WEBSITE_DIR.join("index.html");
     let mut index_file = File::create(index_path)?;
     index_file.write_all(rendered.as_bytes())?;
+
+    // load_syntax_theme("gruvbox (Light) (Hard)")?;
 
     Ok(())
 }
