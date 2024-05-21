@@ -9,16 +9,20 @@ use std::{
 
 use anyhow::Result;
 use gray_matter::{engine::YAML, Matter};
-use html5ever::tree_builder::TreeSink;
+use kuchikiki::traits::*;
 use lazy_static::lazy_static;
-use scraper::{Html, Selector};
 use serde::Deserialize;
+use syntect::{
+    html::{ClassStyle, ClassedHTMLGenerator},
+    util::LinesWithEndings,
+};
 use tera::Tera;
 use walkdir::WalkDir;
 
 lazy_static! {
     static ref CONTENT_DIR: &'static Path = Path::new("content");
     static ref TEMPLATE_DIR: &'static Path = Path::new("templates");
+    static ref THEME_DIR: &'static Path = Path::new("themes");
     static ref WEBSITE_DIR: &'static Path = Path::new("website");
 }
 
@@ -31,6 +35,16 @@ fn tera() -> &'static Tera {
     })
 }
 
+fn ss() -> &'static syntect::parsing::SyntaxSet {
+    static PS: OnceLock<syntect::parsing::SyntaxSet> = OnceLock::new();
+    PS.get_or_init(syntect::parsing::SyntaxSet::load_defaults_newlines)
+}
+
+fn ts() -> &'static syntect::highlighting::ThemeSet {
+    static PS: OnceLock<syntect::highlighting::ThemeSet> = OnceLock::new();
+    PS.get_or_init(|| syntect::highlighting::ThemeSet::load_from_folder(THEME_DIR.clone()).unwrap())
+}
+
 #[derive(Deserialize)]
 #[allow(dead_code)]
 struct FrontMatter {
@@ -41,38 +55,93 @@ struct FrontMatter {
     draft: bool,
 }
 
-fn enhance_media_and_update_html(html: &str) -> String {
-    let mut fragment = Html::parse_document(html);
-    let image_selector = Selector::parse("img").unwrap();
-    // fragment.
+fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
+    let size = imagesize::size(path)?;
+    Ok(size)
+}
 
-    for image_element in fragment.select(&image_selector) {
-        let Some(src) = image_element.attr("src") else {
+fn copy_media_and_update_source<P: AsRef<Path>>(html: &str, move_dir: P) -> String {
+    let document = kuchikiki::parse_html().one(html);
+
+    for img_tag in document.select("img").unwrap() {
+        let img_src = {
+            let attributes = img_tag.attributes.borrow();
+            attributes.get("src").unwrap_or_default().to_owned()
+        };
+
+        let img_path = CONTENT_DIR.join(&img_src);
+        let img_dest = move_dir.as_ref().join(&img_src);
+
+        fs::copy(img_path, img_dest).unwrap();
+        // let image = VipsImage::new_from_file_access(
+        //     &img_path.to_string_lossy(),
+        //     libvips::ops::Access::Random,
+        //     false,
+        // );
+
+        let mut attributes_mut = img_tag.attributes.borrow_mut();
+        // attributes_mut.insert("srcset", img_src.to_owned());
+        // attributes_mut.insert("sizes", img_src.to_owned());
+        if let Ok(img_dims) = get_image_dims(CONTENT_DIR.join(&img_src)) {
+            attributes_mut.insert("width", img_dims.width.to_string());
+            attributes_mut.insert("height", img_dims.height.to_string());
+        }
+    }
+    document.to_string()
+}
+
+fn html_syntax_highlight(html: &str) -> String {
+    let document = kuchikiki::parse_html().one(html);
+
+    for code_tag in document.select("pre code").unwrap() {
+        let Some(class) = ({
+            let attributes = code_tag.attributes.borrow();
+            attributes.get("class").map(|s| s.to_owned())
+        }) else {
             continue;
         };
 
-        // fragment.remove_from_parent(&image_element);
+        let Some(language) = class.split_once('-').map(|p| p.1.to_owned()) else {
+            continue;
+        };
 
-        let image_path = CONTENT_DIR.join(src);
-        let destination_path = WEBSITE_DIR.join(src);
-        let _ = fs::copy(image_path, destination_path);
+        let code = code_tag.text_contents();
+        // dbg!(&language);
+
+        let syntax = ss()
+            .find_syntax_by_token(&language)
+            .unwrap_or_else(|| ss().find_syntax_plain_text());
+
+        let mut html_generator =
+            ClassedHTMLGenerator::new_with_class_style(syntax, ss(), ClassStyle::Spaced);
+        for line in LinesWithEndings::from(&code) {
+            html_generator
+                .parse_html_for_line_which_includes_newline(line)
+                .unwrap();
+        }
+
+        let output_html = html_generator.finalize();
+        let snippet = kuchikiki::parse_html().one(output_html);
+
+        let node = code_tag.as_node().first_child().unwrap();
+        if let Some(text) = node.as_text() {
+            "".clone_into(&mut text.borrow_mut());
+        }
+        node.insert_after(snippet);
     }
-    fragment.html()
+    document.to_string()
 }
 
-// fn test() {
-//     let html = "<html><body>hello<p class=\"hello\">REMOVE ME</p></body></html>";
-//     let selector = Selector::parse(".hello").unwrap();
-//     let mut document = Html::parse_document(html);
-//     let node_ids: Vec<_> = document.select(&selector).map(|x| x.id()).collect();
-//     for id in node_ids {
-//         document.remove_from_parent(&id);
-//     }
-//     assert_eq!(
-//         document.html(),
-//         "<html><head></head><body>hello</body></html>"
-//     );
-// }
+fn load_syntax_theme(theme: &str) -> Result<()> {
+    let theme = &ts().themes[theme];
+    let css = syntect::html::css_for_theme_with_class_style(theme, ClassStyle::Spaced)?;
+
+    let css_path = WEBSITE_DIR.join("syntax.css");
+    let mut css_file = File::create(css_path)?;
+    css_file.write_all(css.as_bytes())?;
+
+    Ok(())
+}
 
 fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
     path.as_ref()
@@ -102,15 +171,26 @@ fn main() -> Result<()> {
 
             let contents = result.content;
 
-            let html_contents =
-                markdown::to_html_with_options(&contents, &markdown::Options::gfm()).unwrap();
+            let mut options = markdown::Options::gfm();
+            options.compile.allow_dangerous_html = true;
+            let html_contents = markdown::to_html_with_options(&contents, &options).unwrap();
 
             // copy images
-            let html_contents = enhance_media_and_update_html(&html_contents);
+            // let html_contents = enhance_media_and_update_html(&html_contents);
 
             let slug = front_matter
                 .slug
                 .unwrap_or_else(|| get_slug_from_path(entry.path()));
+
+            // create directory for page
+            let page_dir = WEBSITE_DIR.join(&slug);
+            if page_dir.try_exists().is_ok_and(|exists| !exists) {
+                fs::create_dir(WEBSITE_DIR.join(&slug)).unwrap();
+            }
+
+            // copy images
+            let html_contents = copy_media_and_update_source(&html_contents, &page_dir);
+            let html_contents = html_syntax_highlight(&html_contents);
 
             let post_context = HashMap::from([
                 ("title", front_matter.title.clone()),
@@ -122,7 +202,7 @@ fn main() -> Result<()> {
             let rendered =
                 tera().render("page.html", &tera::Context::from_serialize(&post_context)?)?;
 
-            let output_path = WEBSITE_DIR.join(format!("{}.html", slug));
+            let output_path = page_dir.join("index.html");
             let mut output_file = File::create(output_path)?;
             output_file.write_all(rendered.as_bytes())?;
 
@@ -137,6 +217,8 @@ fn main() -> Result<()> {
     let index_path = WEBSITE_DIR.join("index.html");
     let mut index_file = File::create(index_path)?;
     index_file.write_all(rendered.as_bytes())?;
+
+    // load_syntax_theme("gruvbox (Light) (Hard)")?;
 
     Ok(())
 }

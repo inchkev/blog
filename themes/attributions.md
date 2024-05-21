@@ -1,0 +1,2 @@
+- gruvbox from https://github.com/Briles/gruvbox/releases/tag/2.4.2
+- ayu light from https://github.com/davidgibsonp/ayu-rstudio
