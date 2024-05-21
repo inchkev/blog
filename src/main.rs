@@ -9,13 +9,11 @@ use std::{
 
 use anyhow::Result;
 use gray_matter::{engine::YAML, Matter};
+use kuchikiki::traits::*;
 use lazy_static::lazy_static;
 use serde::Deserialize;
 use tera::Tera;
 use walkdir::WalkDir;
-
-use html5ever::tree_builder::TreeSink;
-use scraper::{Html, Selector};
 
 lazy_static! {
     static ref CONTENT_DIR: &'static Path = Path::new("content");
@@ -45,31 +43,10 @@ struct FrontMatter {
 fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
     let size = imagesize::size(path)?;
     Ok(size)
+    // create directory for page
 }
 
-fn enhance_media_and_update_html(html: &str) -> String {
-    let mut fragment = Html::parse_document(html);
-    let image_selector = Selector::parse("img").unwrap();
-    // fragment.
-
-    for image_element in fragment.select(&image_selector) {
-        let Some(src) = image_element.attr("src") else {
-            continue;
-        };
-        // fragment.remove_from_parent(&image_element);
-        // let id = image_element.id();
-
-        // let mut tree = fragment.tree.get_mut(id).unwrap().detach();
-
-        let image_path = CONTENT_DIR.join(src);
-        let destination_path = WEBSITE_DIR.join(src);
-        let _ = fs::copy(image_path, destination_path);
-    }
-    fragment.html()
-}
-
-fn enhance_media_and_update_html2(html: &str) -> String {
-    use kuchikiki::{traits::*, NodeRef};
+fn copy_media_and_update_source<P: AsRef<Path>>(html: &str, move_dir: P) -> String {
     let document = kuchikiki::parse_html().one(html);
 
     for img_tag in document.select("img").unwrap() {
@@ -78,38 +55,26 @@ fn enhance_media_and_update_html2(html: &str) -> String {
             attributes.get("src").unwrap_or_default().to_owned()
         };
 
+        let img_path = CONTENT_DIR.join(&img_src);
+        let img_dest = move_dir.as_ref().join(&img_src);
+
+        fs::copy(img_path, img_dest).unwrap();
+        // let image = VipsImage::new_from_file_access(
+        //     &img_path.to_string_lossy(),
+        //     libvips::ops::Access::Random,
+        //     false,
+        // );
+
         let mut attributes_mut = img_tag.attributes.borrow_mut();
-
-        attributes_mut.insert("srcset", img_src.to_owned());
-        attributes_mut.insert("sizes", img_src.to_owned());
-
+        // attributes_mut.insert("srcset", img_src.to_owned());
+        // attributes_mut.insert("sizes", img_src.to_owned());
         if let Ok(img_dims) = get_image_dims(CONTENT_DIR.join(&img_src)) {
             attributes_mut.insert("width", img_dims.width.to_string());
             attributes_mut.insert("height", img_dims.height.to_string());
         }
-
-        dbg!(&img_src);
     }
     document.to_string()
 }
-
-// fn enhance_media_and_update_html2(html: &str) -> String {
-
-// }
-
-// fn test() {
-//     let html = "<html><body>hello<p class=\"hello\">REMOVE ME</p></body></html>";
-//     let selector = Selector::parse(".hello").unwrap();
-//     let mut document = Html::parse_document(html);
-//     let node_ids: Vec<_> = document.select(&selector).map(|x| x.id()).collect();
-//     for id in node_ids {
-//         document.remove_from_parent(&id);
-//     }
-//     assert_eq!(
-//         document.html(),
-//         "<html><head></head><body>hello</body></html>"
-//     );
-// }
 
 fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
     path.as_ref()
@@ -144,12 +109,19 @@ fn main() -> Result<()> {
 
             // copy images
             // let html_contents = enhance_media_and_update_html(&html_contents);
-            let html_contents = enhance_media_and_update_html2(&html_contents);
-            dbg!(&html_contents);
 
             let slug = front_matter
                 .slug
                 .unwrap_or_else(|| get_slug_from_path(entry.path()));
+
+            // create directory for page
+            let page_dir = WEBSITE_DIR.join(&slug);
+            if page_dir.try_exists().is_ok_and(|exists| !exists) {
+                fs::create_dir(WEBSITE_DIR.join(&slug)).unwrap();
+            }
+
+            // copy images
+            let html_contents = copy_media_and_update_source(&html_contents, &page_dir);
 
             let post_context = HashMap::from([
                 ("title", front_matter.title.clone()),
@@ -161,11 +133,9 @@ fn main() -> Result<()> {
             let rendered =
                 tera().render("page.html", &tera::Context::from_serialize(&post_context)?)?;
 
-            let output_path = WEBSITE_DIR.join(format!("{}.html", slug));
-            println!("\nWriting to {:?}", output_path);
-            println!("{}", rendered);
-            // let mut output_file = File::create(output_path)?;
-            // output_file.write_all(rendered.as_bytes())?;
+            let output_path = page_dir.join("index.html");
+            let mut output_file = File::create(output_path)?;
+            output_file.write_all(rendered.as_bytes())?;
 
             posts.push(post_context);
         }
@@ -176,10 +146,8 @@ fn main() -> Result<()> {
     let rendered = tera().render("index.html", &tera::Context::from_serialize(index_context)?)?;
 
     let index_path = WEBSITE_DIR.join("index.html");
-    // println!("\nWriting to {:?}", index_path);
-    // println!("{}", rendered);
-    // let mut index_file = File::create(index_path)?;
-    // index_file.write_all(rendered.as_bytes())?;
+    let mut index_file = File::create(index_path)?;
+    index_file.write_all(rendered.as_bytes())?;
 
     Ok(())
 }

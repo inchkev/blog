@@ -19,23 +19,26 @@
 
 <body>
   <main>
-    <h1>Kevin's blog</h1>
+    <div class="content-wrapper">
+      <h1>Kevin's blog</h1>
 
-    <h1>{{ title }}</h1>
+      <h1>{{ title }}</h1>
 
-    <header>
-      <p>{{ date }}</p>
-      <p>{# word_length #}</p>
-    </header>
+      <header>
+        <p>{{ date }}</p>
+        <p>{# word_length #}</p>
+      </header>
 
-    <div class="contents">
-      {{ contents }}
+      <div class="contents">
+        {{ contents }}
+      </div>
+
+      <footer>
+        <a href="./">back</a>
+      </footer>
     </div>
-  </main>
 
-  <footer>
-    <a href="./">back</a>
-  </footer>
+  </main>
 </body>
 
 </html>
