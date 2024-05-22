@@ -57,9 +57,13 @@ struct FrontMatter {
 
 fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> String {
     let document = kuchikiki::parse_html().one(html);
+
     html::copy_media(&document, page_dir);
     html::syntax_highlight_code_blocks(&document);
-    document.to_string()
+
+    html::get_body_children_of_document(&document)
+        .map(|nr| nr.to_string())
+        .collect()
 }
 
 #[allow(dead_code)]

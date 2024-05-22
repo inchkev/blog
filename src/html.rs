@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::Result;
-use kuchikiki::{traits::TendrilSink, NodeRef};
+use kuchikiki::{iter::Siblings, traits::TendrilSink, NodeRef};
 use syntect::{
     html::{ClassStyle, ClassedHTMLGenerator},
     util::LinesWithEndings,
@@ -12,6 +12,10 @@ use crate::{ss, CONTENT_DIR};
 fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
     let size = imagesize::size(path)?;
     Ok(size)
+}
+
+pub fn get_body_children_of_document(document: &NodeRef) -> Siblings {
+    document.select_first("body").unwrap().as_node().children()
 }
 
 pub fn copy_media<P: AsRef<Path>>(document: &NodeRef, move_dir: P) {
@@ -66,13 +70,15 @@ pub fn syntax_highlight_code_blocks(document: &NodeRef) {
         }
 
         let output_html = html_generator.finalize();
-        let snippet = kuchikiki::parse_html().one(output_html);
+        let code_document = kuchikiki::parse_html().one(output_html);
 
         let node = code_tag.as_node().first_child().unwrap();
         // remove all existing text
         if let Some(text) = node.as_text() {
             "".clone_into(&mut text.borrow_mut());
         }
-        node.insert_after(snippet);
+        for code_node in get_body_children_of_document(&code_document) {
+            node.insert_after(code_node);
+        }
     }
 }
