@@ -1,0 +1,78 @@
+use std::path::Path;
+
+use anyhow::Result;
+use kuchikiki::{traits::TendrilSink, NodeRef};
+use syntect::{
+    html::{ClassStyle, ClassedHTMLGenerator},
+    util::LinesWithEndings,
+};
+
+use crate::{ss, CONTENT_DIR};
+
+fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
+    let size = imagesize::size(path)?;
+    Ok(size)
+}
+
+pub fn copy_media<P: AsRef<Path>>(document: &NodeRef, move_dir: P) {
+    for img_tag in document.select("img").unwrap() {
+        let img_src = {
+            let attributes = img_tag.attributes.borrow();
+            attributes.get("src").unwrap_or_default().to_owned()
+        };
+
+        let img_path = CONTENT_DIR.join(&img_src);
+        let img_dest = move_dir.as_ref().join(&img_src);
+
+        std::fs::copy(img_path, img_dest).unwrap();
+
+        let mut attributes_mut = img_tag.attributes.borrow_mut();
+        // attributes_mut.insert("srcset", img_src.to_owned());
+        // attributes_mut.insert("sizes", img_src.to_owned());
+        if let Ok(img_dims) = get_image_dims(CONTENT_DIR.join(&img_src)) {
+            attributes_mut.insert("width", img_dims.width.to_string());
+            attributes_mut.insert("height", img_dims.height.to_string());
+        }
+    }
+}
+
+pub fn syntax_highlight_code_blocks(document: &NodeRef) {
+    for code_tag in document.select("pre code").unwrap() {
+        let Some(class) = ({
+            let attributes = code_tag.attributes.borrow();
+            attributes.get("class").map(|s| s.to_owned())
+        }) else {
+            continue;
+        };
+
+        let Some(language) = class.split_once('-').map(|p| p.1.to_owned()) else {
+            continue;
+        };
+
+        // dbg!(&language);
+
+        let syntax = ss()
+            .find_syntax_by_token(&language)
+            .unwrap_or_else(|| ss().find_syntax_plain_text());
+
+        let mut html_generator =
+            ClassedHTMLGenerator::new_with_class_style(syntax, ss(), ClassStyle::Spaced);
+
+        let code = code_tag.text_contents();
+        for line in LinesWithEndings::from(&code) {
+            html_generator
+                .parse_html_for_line_which_includes_newline(line)
+                .unwrap();
+        }
+
+        let output_html = html_generator.finalize();
+        let snippet = kuchikiki::parse_html().one(output_html);
+
+        let node = code_tag.as_node().first_child().unwrap();
+        // remove all existing text
+        if let Some(text) = node.as_text() {
+            "".clone_into(&mut text.borrow_mut());
+        }
+        node.insert_after(snippet);
+    }
+}
