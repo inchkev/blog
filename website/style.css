@@ -1,5 +1,6 @@
 :root {
   --green: #53A82C;
+  --gray: rgba(0, 0, 0, 0.2);
   --lightgreen: #B5E59E;
   --light: #F7F7F7;
 }
@@ -11,9 +12,9 @@ html, body {
 }
 
 body {
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: system-ui, Arial, Helvetica, sans-serif;
   font-size: 16px;
-  line-height: 1.5;
+  line-height: 1.4;
 
   overflow-x: scroll;
   /* background-color: var(--light); */
@@ -30,7 +31,7 @@ body {
 
 h1, h2, h3, h4, h5, h6 {
   font-weight: normal;
-  font-family:'Times New Roman', Times, serif;
+  /* font-family:'Times New Roman', Times, serif; */
 
   color: #53A82C;
 }
@@ -43,6 +44,7 @@ pre, blockquote, aside {
   padding: 1em;
   background: var(--light);
   border-radius: 5px;
+  border: 1px solid var(--gray);
 }
 pre {
   font-size: 0.8em;
@@ -73,4 +75,13 @@ hr {
   height: 1px;
   color: var(--green); /* old IE */
   background-color: var(--green); /* Modern Browsers */
+}
+
+table {
+  border-collapse: collapse;
+}
+table th,
+table td {
+  padding: 0.35em;
+  border: 1px solid var(--gray);
 }

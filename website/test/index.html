@@ -31,14 +31,69 @@
       </header>
 
       <div class="contents">
-        <html><head></head><body><p>This post is to help me style the blog.</p>
-<aside class="searched-words">
-  markdown aside
-</aside>
-<blockquote>
-<p>Quote
-multiline</p>
-</blockquote>
+        <html><head></head><body><p>A markdown tour de force to help me style my blog</p>
+<h2>This is an h2</h2>
+<p>Text text text text text <strong>bold text bold text bold text</strong> text text... <em>italic text italic text italic text</em>... text text! Text text, <del>strikethrough text strikethrough text</del> <strong>strong <strong>with strong</strong> in it</strong> <em>emph <em>with emph</em> in it</em></p>
+<h3>This is an h3,</h3>
+<p>Text text text text text</p>
+<h4>This is an h4,</h4>
+<table>
+<thead>
+<tr>
+<th>Month</th>
+<th>Website hosting</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td>January</td>
+<td>$1,000</td>
+</tr>
+<tr>
+<td>February</td>
+<td>$800<br><br>newline test</td>
+</tr>
+<tr>
+<td>March</td>
+<td>$1,250</td>
+</tr>
+</tbody>
+</table>
+<p>Help guys how do i budget this?</p>
+<h5>This is an h5 (markdown tables support text alignment????)</h5>
+<table>
+<thead>
+<tr>
+<th align="left">Item</th>
+<th align="center">In Stock</th>
+<th align="right">Price</th>
+</tr>
+</thead>
+<tbody>
+<tr>
+<td align="left">Python Hat</td>
+<td align="center">True</td>
+<td align="right">23.99</td>
+</tr>
+<tr>
+<td align="left">SQL Hat</td>
+<td align="center">True</td>
+<td align="right">23.99</td>
+</tr>
+<tr>
+<td align="left">Codecademy Tee</td>
+<td align="center">False</td>
+<td align="right">19.99</td>
+</tr>
+<tr>
+<td align="left">Codecademy Hoodie</td>
+<td align="center">False</td>
+<td align="right">42.99</td>
+</tr>
+</tbody>
+</table>
+<p>Courtesy of <a href="https://www.codecademy.com/resources/docs/markdown/tables">https://www.codecademy.com/resources/docs/markdown/tables</a></p>
+<h6>And this is an h6, the smallest heading possible.</h6>
 <h2>Lists</h2>
 <p>I'll want to make lists. Unordered ones, of course. Lists are nice because sometimes you don't want to write fully-formed, coherent, sentences, but would much rather:</p>
 <ul>
@@ -58,8 +113,14 @@ multiline</p>
 </li>
 </ul>
 </li>
-<li>that's enough.</li>
+<li>that's enough.
+<blockquote>
+<p>blockquote in the middle</p>
+</blockquote>
+</li>
+<li>how rude to interrupt the unordered list</li>
 </ul>
+<hr>
 <p>Don't forget ordered lists! For example, here is what I ate on May 18th, 2024, ordered chronologically.</p>
 <ol>
 <li>Greek yogurt, maple syrup, Eleven Madison Park granola</li>
@@ -67,15 +128,33 @@ multiline</p>
 <li>One bite of Chia's pasta alla vodka</li>
 <li>Half a bbq pork pineapple bun from Pineapple King Bakery</li>
 <li>Small glass of merlot</li>
-<li>Hot toddy with lemon syrup instead of lemon since we ran out</li>
+<li>Hot toddy with lemon syrup instead of lemon since we ran out
+<ol>
+<li>
+<p>You can also have indented lists.</p>
+<p>indented element</p>
+</li>
+<li>
+<p>(not a food, sorry)</p>
+<pre><code class="language-python"><html><head></head><body><span class="source python"><span class="meta function-call python"><span class="meta qualified-name python"><span class="support function builtin python">print</span></span><span class="punctuation section arguments begin python">(</span><span class="meta function-call arguments python"><span class="meta string python"><span class="string quoted single python"><span class="punctuation definition string begin python">'</span></span></span><span class="meta string python"><span class="string quoted single python">hello, world!<span class="punctuation definition string end python">'</span></span></span></span><span class="punctuation section arguments end python">)</span></span>
+</span></body></html></code></pre>
+</li>
+<li>
+<p>test</p>
+</li>
 </ol>
-<p>I'm using a crate that supports github flavored markdown too, so in theory checkboxes should work too! Let's see:</p>
+</li>
+</ol>
+<h2>Creature comforts</h2>
+<p>According to the <a href="https://www.markdownguide.org/basic-syntax/">markdown guide</a> you can add a title for a link. My favorite cooking website is <a href="https://www.seriouseats.com/" title="Serious Eats is the destination for delicious food, with definitive recipes, trailblazing science, and essential guides to eating and knowing all about the ...">Serious Eats</a> (try hovering over the "Serious Eats" link)</p>
+<p>I'm using a crate<sup><a href="#user-content-fn-1" id="user-content-fnref-1" data-footnote-ref="" aria-describedby="footnote-label">1</a></sup> that supports github flavored markdown too, so in theory checkboxes should work too! Let's see:</p>
 <ul>
 <li><input type="checkbox" disabled=""> Cyan</li>
 <li><input type="checkbox" disabled=""> Magenta</li>
 <li><input type="checkbox" disabled="" checked=""> Yellow</li>
 <li><input type="checkbox" disabled=""> Key</li>
 </ul>
+<p>Github flavored markdown also supports footnotes<sup><a href="#user-content-fn-2" id="user-content-fnref-2" data-footnote-ref="" aria-describedby="footnote-label">2</a></sup></p>
 <hr>
 <h2>Code</h2>
 <p>My favorite thing to do in rust has got to be the <code>let-else</code> block. Something I don't quite understand yet is the difference between <code>and_then()</code> and <code>map()</code>. <a href="https://doc.rust-lang.org/std/path/struct.Path.html"><code>std::path::Path</code></a> is awesome</p>
@@ -133,12 +212,52 @@ multiline</p>
 </span>                     <span class="meta function-call python"><span class="meta qualified-name python"><span class="variable function python">vec3</span></span><span class="punctuation section arguments begin python">(</span><span class="meta function-call arguments python"><span class="constant numeric float python">0<span class="punctuation separator decimal python">.</span>0</span><span class="punctuation separator arguments python">,</span> <span class="constant numeric float python">0<span class="punctuation separator decimal python">.</span>0</span><span class="punctuation separator arguments python">,</span> <span class="constant numeric float python">1<span class="punctuation separator decimal python">.</span>0</span></span><span class="punctuation section arguments end python">)</span></span></span><span class="punctuation section arguments end python">)</span></span>                             <span class="comment line number-sign python"><span class="punctuation definition comment python">#</span> up
 </span>    <span class="keyword control flow return python">return</span> <span class="meta function-call python"><span class="meta qualified-name python"><span class="meta generic-name python">glm</span><span class="punctuation accessor dot python">.</span></span><span class="meta qualified-name python"><span class="variable function python">translate</span></span><span class="punctuation section arguments begin python">(</span><span class="meta function-call arguments python"><span class="meta qualified-name python"><span class="meta generic-name python">mat</span></span> <span class="keyword operator arithmetic python">*</span> <span class="meta function-call python"><span class="meta qualified-name python"><span class="meta generic-name python">glm</span><span class="punctuation accessor dot python">.</span></span><span class="meta qualified-name python"><span class="variable function python">mat4_cast</span></span><span class="punctuation section arguments begin python">(</span><span class="meta function-call arguments python"><span class="meta qualified-name python"><span class="variable language python">self</span><span class="punctuation accessor dot python">.</span><span class="meta generic-name python">_rot_quat</span></span></span><span class="punctuation section arguments end python">)</span></span><span class="punctuation separator arguments python">,</span> <span class="meta qualified-name python"><span class="variable language python">self</span><span class="punctuation accessor dot python">.</span><span class="meta generic-name python">_center</span></span></span><span class="punctuation section arguments end python">)</span></span>
 </span></body></html></code></pre>
-<p>plaintext,</p>
-<pre><code class="language-plaintext"><html><head></head><body><span class="text plain">plain lol
+<p>json,</p>
+<pre><code class="language-json"><html><head></head><body><span class="source json"><span class="meta structure dictionary json"><span class="punctuation section dictionary begin json">{</span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">"</span>firstName<span class="punctuation definition string end json">"</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">"</span>Kevin<span class="punctuation definition string end json">"</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">"</span>lastName<span class="punctuation definition string end json">"</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="string quoted double json"><span class="punctuation definition string begin json">"</span>Chen<span class="punctuation definition string end json">"</span></span><span class="punctuation separator dictionary pair json">,</span></span>
+  <span class="meta structure dictionary key json"><span class="string quoted double json"><span class="punctuation definition string begin json">"</span>age<span class="punctuation definition string end json">"</span></span></span><span class="meta structure dictionary value json"><span class="punctuation separator dictionary key-value json">:</span> <span class="constant numeric json">22</span>
+</span><span class="punctuation section dictionary end json">}</span></span>
 </span></body></html></code></pre>
-<p>console,</p>
-<pre><code class="language-console"><html><head></head><body><span class="text plain">$ sudo rm -rf /
-</span></body></html></code></pre></body></html>
+<p>plaintext,</p>
+<pre><code class="language-plaintext"><html><head></head><body><span class="text plain">plaintext
+</span></body></html></code></pre>
+<h2>Extras</h2>
+<p>From <a href="https://www.markdownguide.org/hacks/#link-targets">https://www.markdownguide.org/hacks/#link-targets</a></p>
+<ul>
+<li>Copyright (©) — ©</li>
+<li>Registered trademark (®) — ®</li>
+<li>Trademark (™) — ™</li>
+<li>Euro (€) — €</li>
+<li>Left arrow (←) — ←</li>
+<li>Up arrow (↑) — ↑</li>
+<li>Right arrow (→) — →</li>
+<li>Down arrow (↓) — ↓</li>
+<li>Degree (°) — °</li>
+<li>Pi (π) — π</li>
+</ul>
+<aside class="searched-words">
+  markdown aside
+</aside>
+<blockquote>
+<p>Multiline quote</p>
+<p>Multiline quote, <strong>line 2</strong></p>
+<p><code>Line 3</code></p>
+<blockquote>
+<p>blockquotes can be nested</p>
+</blockquote>
+</blockquote>
+<section data-footnotes="" class="footnotes"><h2 id="footnote-label" class="sr-only">Footnotes</h2>
+<ol>
+<li id="user-content-fn-1">
+<p><a href="https://github.com/wooorm/markdown-rs">https://github.com/wooorm/markdown-rs</a> <a href="#user-content-fnref-1" data-footnote-backref="" aria-label="Back to content" class="data-footnote-backref">↩</a></p>
+</li>
+<li id="user-content-fn-2">
+<p><a href="https://github.blog/changelog/2021-09-30-footnotes-now-supported-in-markdown-fields/">https://github.blog/changelog/2021-09-30-footnotes-now-supported-in-markdown-fields/</a> <a href="#user-content-fnref-2" data-footnote-backref="" aria-label="Back to content" class="data-footnote-backref">↩</a></p>
+</li>
+</ol>
+</section>
+</body></html>
       </div>
 
       <footer>
