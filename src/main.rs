@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     fs::{self, File},
     io::Write,
-    path::Path,
+    path::{Path, PathBuf},
     sync::OnceLock,
 };
 
@@ -11,17 +11,16 @@ use gray_matter::{engine::YAML, Matter};
 use kuchikiki::traits::TendrilSink;
 use lazy_static::lazy_static;
 use serde::Deserialize;
-use syntect::html::ClassStyle;
 use tera::Tera;
 use walkdir::WalkDir;
 
 mod html;
 
 lazy_static! {
-    static ref CONTENT_DIR: &'static Path = Path::new("content");
-    static ref TEMPLATE_DIR: &'static Path = Path::new("templates");
-    static ref THEME_DIR: &'static Path = Path::new("themes");
-    static ref WEBSITE_DIR: &'static Path = Path::new("website");
+    static ref CONTENT_DIR: PathBuf = "content".into();
+    static ref TEMPLATE_DIR: PathBuf = "templates".into();
+    static ref THEME_DIR: PathBuf = "themes".into();
+    static ref WEBSITE_DIR: PathBuf = "website".into();
 }
 
 fn tera() -> &'static Tera {
@@ -42,7 +41,7 @@ pub fn ss() -> &'static syntect::parsing::SyntaxSet {
 #[allow(dead_code)]
 fn ts() -> &'static syntect::highlighting::ThemeSet {
     static PS: OnceLock<syntect::highlighting::ThemeSet> = OnceLock::new();
-    PS.get_or_init(|| syntect::highlighting::ThemeSet::load_from_folder(THEME_DIR.clone()).unwrap())
+    PS.get_or_init(|| syntect::highlighting::ThemeSet::load_from_folder(&*THEME_DIR).unwrap())
 }
 
 #[derive(Deserialize)]
@@ -58,7 +57,7 @@ struct FrontMatter {
 fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> String {
     let document = kuchikiki::parse_html().one(html);
 
-    html::copy_media(&document, page_dir);
+    html::copy_media_and_add_dimensions(&document, page_dir);
     html::syntax_highlight_code_blocks(&document);
 
     html::get_body_children_of_document(&document)
@@ -69,7 +68,7 @@ fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> String {
 #[allow(dead_code)]
 fn load_syntax_theme(theme: &str) -> Result<()> {
     let theme = &ts().themes[theme];
-    let css = syntect::html::css_for_theme_with_class_style(theme, ClassStyle::Spaced)?;
+    let css = syntect::html::css_for_theme_with_class_style(theme, html::SYNTECT_CLASSSTYLE)?;
 
     let css_path = WEBSITE_DIR.join("syntax.css");
     let mut css_file = File::create(css_path)?;
@@ -83,18 +82,22 @@ fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
         .file_stem()
         .and_then(|stem| stem.to_str()?.split_once('_').map(|x| x.1))
         .unwrap_or_default()
-        .into()
+        .to_owned()
 }
 
 fn main() -> Result<()> {
     let mut posts = Vec::new();
 
-    for entry in WalkDir::new(*CONTENT_DIR)
+    for entry in WalkDir::new(&*CONTENT_DIR)
         .into_iter()
         .filter_map(|e| e.ok())
     {
-        if entry.path().is_file() && entry.path().extension().is_some_and(|s| s == "md") {
-            let file_contents = fs::read_to_string(entry.path())?;
+        let path = entry.into_path();
+        if path.is_file() && path.extension().is_some_and(|s| s == "md") {
+            print!("Reading {} ...", path.as_os_str().to_string_lossy());
+            std::io::stdout().flush()?;
+
+            let file_contents = fs::read_to_string(&path)?;
 
             let yaml_matter = Matter::<YAML>::new();
             let result = yaml_matter.parse(&file_contents);
@@ -111,7 +114,7 @@ fn main() -> Result<()> {
 
             let slug = front_matter
                 .slug
-                .unwrap_or_else(|| get_slug_from_path(entry.path()));
+                .unwrap_or_else(|| get_slug_from_path(&path));
 
             // create directory for page
             let page_dir = WEBSITE_DIR.join(&slug);
@@ -137,6 +140,8 @@ fn main() -> Result<()> {
             let mut output_file = File::create(output_path)?;
             output_file.write_all(rendered.as_bytes())?;
 
+            println!(" done");
+
             posts.push(post_context);
         }
     }
@@ -146,8 +151,10 @@ fn main() -> Result<()> {
     let rendered = tera().render("index.html", &tera::Context::from_serialize(index_context)?)?;
 
     let index_path = WEBSITE_DIR.join("index.html");
-    let mut index_file = File::create(index_path)?;
+    let mut index_file = File::create(&index_path)?;
     index_file.write_all(rendered.as_bytes())?;
+
+    println!("Writing {}", index_path.as_os_str().to_string_lossy());
 
     // load_syntax_theme("gruvbox (Light) (Hard)")?;
 
