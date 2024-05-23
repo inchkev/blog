@@ -1,8 +1,9 @@
 :root {
-  --green: #53A82C;
+  --green: #008400;
+  --red: #ed3078;
   --gray: rgba(0, 0, 0, 0.2);
   --lightgreen: #B5E59E;
-  --light: #F7F7F7;
+  --light: #FBFBFB;
 }
 
 html, body {
@@ -33,12 +34,27 @@ h1, h2, h3, h4, h5, h6 {
   font-weight: normal;
   /* font-family:'Times New Roman', Times, serif; */
 
-  color: #53A82C;
+  color: var(--green);
 }
 
 h3, h4, h5, h6 {
   font-size: 1em;
 }
+
+a {
+  color: black;
+  text-decoration: none;
+  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+}
+a:hover {
+  border-bottom: 1px solid var(--red);
+}
+a:link,
+a:visited {
+  color: black;
+}
+
+
 
 pre, blockquote, aside {
   padding: 1em;
@@ -69,8 +85,8 @@ footer {
   margin-top: 5em;
 }
 hr {
-  margin-top: 2em;
-  margin-bottom: 2em;
+  margin-top: 3em;
+  margin-bottom: 3em;
   border: none;
   height: 1px;
   color: var(--green); /* old IE */

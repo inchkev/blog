@@ -108,8 +108,14 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            let mut options = markdown::Options::gfm();
-            options.compile.allow_dangerous_html = true;
+            let options = markdown::Options {
+                parse: markdown::ParseOptions::gfm(),
+                compile: markdown::CompileOptions {
+                    allow_dangerous_html: true,
+                    allow_dangerous_protocol: true,
+                    ..markdown::CompileOptions::gfm()
+                },
+            };
             let html_contents = markdown::to_html_with_options(&contents, &options).unwrap();
 
             let slug = front_matter
