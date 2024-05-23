@@ -26,9 +26,7 @@ lazy_static! {
 fn tera() -> &'static Tera {
     static TERA: OnceLock<Tera> = OnceLock::new();
     TERA.get_or_init(|| {
-        let mut tera = Tera::new(&TEMPLATE_DIR.join("*.html").to_string_lossy());
-        dbg!(&tera);
-        let mut tera = tera.unwrap();
+        let mut tera = Tera::new(&TEMPLATE_DIR.join("*.html").to_string_lossy()).unwrap();
         // don't autoescape anything
         tera.autoescape_on(vec![]);
         tera
