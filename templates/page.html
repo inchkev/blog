@@ -1,31 +1,10 @@
-<!DOCTYPE html>
-
-<html lang="en">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-
-  <title>{{ title }} - Kevin's blog</title>
-  <link rel="shortcut icon" type="image/png" href="/favicon.png">
-
-  <meta name="description" content="Kevin's blog">
-  <meta name="author" content="Kevin Chen">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:creator" content="@inchkev">
-
-  <link rel="stylesheet" href="../style.css">
-  <link rel="stylesheet" href="../syntax.css">
-</head>
-
-<body>
-  <main>
-    <div class="content-wrapper">
+{% extends "base.html" %}
+{% block title %}{{ title }} - {% endblock title %}
+{% block content -%}
       <h1>Kevin’s blog</h1>
 
-      <h1>{{ title }}</h1>
-
       <header>
+        <h1>{{ title }}</h1>
         <p>{{ date }}</p>
         <p>{# word_length #}</p>
       </header>
@@ -33,13 +12,7 @@
       <div class="contents">
         {{ contents }}
       </div>
-
-      <footer>
+{%- endblock content %}
+{% block footer -%}
         <a href="..">back</a>
-      </footer>
-    </div>
-
-  </main>
-</body>
-
-</html>
+{%- endblock footer %}

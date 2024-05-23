@@ -1,39 +1,12 @@
-<!DOCTYPE html>
 
-<html lang="en">
-
-<head>
-  <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1.0">
-
-  <title>Kevin's blog</title>
-  <link rel="shortcut icon" type="image/png" href="/favicon.png">
-
-  <meta name="description" content="Kevin's blog">
-  <meta name="author" content="Kevin Chen">
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:creator" content="@inchkev">
-
-  <link rel="stylesheet" href="style.css">
-</head>
-
-<body>
-  <main>
-    <div class="content-wrapper">
+{% extends "base.html" %}
+{% block content -%}
       <h1>Kevin’s blog</h1>
 
       <div class="posts">
-        {% for post in posts %}
+      {%- for post in posts %}
         <p>
           <a href="./{{ post.slug }}">{{ post.title }} - {{ post.date }}</a>
-        </p>
-        {% endfor %}
+        </p>{% endfor %}
       </div>
-    </div>
-  </main>
-
-  <footer>
-  </footer>
-</body>
-
-</html>
+{%- endblock content %}

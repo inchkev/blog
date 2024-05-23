@@ -31,14 +31,14 @@ body {
 }
 
 h1, h2, h3, h4, h5, h6 {
-  font-weight: normal;
   /* font-family:'Times New Roman', Times, serif; */
-
   color: var(--green);
 }
-
 h3, h4, h5, h6 {
   font-size: 1em;
+}
+h1, h2 {
+  font-weight: normal;
 }
 
 a {
