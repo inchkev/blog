@@ -5,12 +5,12 @@
   <link rel="stylesheet" href="style.css">
 {% endblock style %}
 {% block content -%}
-      <h1>Kevin’s blog</h1>
+      <h1>{{ base__name }}</h1>
 
       <div class="posts">
       {%- for post in posts %}
         <p>
-          <a href="./{{ post.slug }}">{{ post.title }} - {{ post.date }}</a>
+          <a href="{{ post.slug }}">{{ post.title }} - {{ post.date }}</a>
         </p>{% endfor %}
       </div>
 {%- endblock content %}
