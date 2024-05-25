@@ -4,7 +4,7 @@
   --gray: #AAAAAA;
   --lightgreen: #B5E59E;
   --light: #FBFBFB;
-}
+}x
 
 html, body {
   margin: 0;
@@ -17,7 +17,7 @@ body {
   font-size: 16px;
   line-height: 1.4;
 
-  overflow-x: scroll;
+  overflow-x: auto;
   /* background-color: var(--light); */
 
   box-sizing: border-box;
