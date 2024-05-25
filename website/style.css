@@ -73,7 +73,7 @@ code {
   font-size: 0.9rem;
 }
 pre code {
-  overflow-x: scroll;
+  overflow-x: auto;
   display: block;
   font-size: 0.8rem;
 }
