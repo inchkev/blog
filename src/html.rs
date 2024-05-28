@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{collections::HashSet, path::Path};
 
 use anyhow::Result;
 use kuchikiki::{iter::Siblings, traits::TendrilSink, NodeRef};
@@ -21,6 +21,8 @@ pub fn get_body_children_of_document(document: &NodeRef) -> Siblings {
 }
 
 pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(document: &NodeRef, move_dir: P) {
+    let mut copied_images = HashSet::new();
+
     for img_tag in document.select("img").unwrap() {
         let img_src = {
             let attributes = img_tag.attributes.borrow();
@@ -30,7 +32,12 @@ pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(document: &NodeRef, move_di
         let img_path = CONTENT_DIR.join(&img_src);
         let img_dest = move_dir.as_ref().join(&img_src);
 
-        std::fs::copy(img_path, img_dest).unwrap();
+        // avoid re-copying the same image
+        if !copied_images.contains(&img_path) {
+            std::fs::copy(&img_path, &img_dest).unwrap();
+            copied_images.insert(img_path.clone());
+            // dbg!(&img_path);
+        }
 
         let mut attributes_mut = img_tag.attributes.borrow_mut();
         // attributes_mut.insert("srcset", img_src.to_owned());
