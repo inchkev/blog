@@ -9,8 +9,8 @@
 
       <div class="posts">
       {%- for post in posts %}
-        <p>
-          {{ post.date }} -- <a href="{{ post.slug }}">{{ post.title }}</a>
+        <p class="post">
+          <a href="{{ post.slug }}">{{ post.date }} -- {{ post.title }}</a>
         </p>{% endfor %}
       </div>
 

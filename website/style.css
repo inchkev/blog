@@ -1,5 +1,6 @@
 :root {
   --backgroundcolor: rgb(80,94,16);
+  --green: #008400;
   --brown: #b06200;
   --text: #003000;
   --border: #008400;
@@ -32,11 +33,13 @@ body {
   background-image: -webkit-image-set(
     url("background.avif"),
     url("background.webp"),
-    url("background.jpg"));
+    url("background.jpg")
+  );
   background-image: image-set(
     url("background.avif") type("image/avif"),
     url("background.webp") type("image/webp"),
-    url("background.jpg") type("image/jpg"));
+    url("background.jpg") type("image/jpg")
+  );
   min-height: 100vh;
 }
 
@@ -50,6 +53,15 @@ body {
 #title, .head {
   margin-top: 0;
   margin-bottom: 1.5rem;
+}
+.head h1 {
+  margin-bottom: 0.2rem;
+}
+.head p {
+  color: var(--green);
+}
+.post {
+  margin-bottom: 0;
 }
 p, h1, h2, h3, h4, h5, h6, table, ul, ol {
   margin-top: 0;
@@ -127,7 +139,7 @@ pre code {
 }
 
 header {
-  margin-bottom: 1.5rem;
+  margin-bottom: 2rem;
 }
 footer {
   margin-top: 2rem;
