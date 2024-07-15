@@ -27,7 +27,7 @@ body {
   word-break: break-word;
   box-sizing: border-box;
 
-  padding: 0.5rem;
+  padding: 0.75rem;
 
   background-image: -webkit-image-set(
     url("background.avif") type("image/avif"),
