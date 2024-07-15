@@ -1,102 +1,128 @@
 :root {
-  --green: #008400;
   --brown: #b06200;
-  --red: #ed3078;
-  --gray: #aaaaaa;
-  --lightgreen: #b5e59e;
-  --light: #fbfbfb;
+  --text: #003000;
+  --border: #008400;
+  --inlinecode: #00840012;
 }
 
 html, body {
   margin: 0;
+  color: var(--text);
+  background-color: white;
   text-size-adjust: none;
   -webkit-text-size-adjust: 100%;
+  font-size: 16px;
+  line-height: 22px;
 }
 
 body {
-  font-family: system-ui, Arial, Helvetica, sans-serif;
-  /* font-family: 'Times New Roman', Times, serif; */
-  font-size: 16px;
-  line-height: 1.5;
+  font-family: "cmu_serif", serif;
+  letter-spacing: 0.015rem;
 
   overflow-x: auto;
-  /* background-color: var(--light); */
-
   box-sizing: border-box;
-  padding: 1.5em;
+
+  padding: 0.5rem;
 }
 
 .content-wrapper {
+  border: 1px solid var(--border);
   max-width: 40rem;
-  margin-left: auto;
-  margin-right: auto;
+  padding: 1.5rem;
 }
 
+#title, .head {
+  margin-top: 0;
+  margin-bottom: 1.5rem;
+}
+p, h1, h2, h3, h4, h5, h6, table, ul, ol {
+  margin-top: 0;
+  margin-bottom: 0.75rem;
+}
+p strong, p b {
+  letter-spacing: 0;
+}
 h1, h2, h3, h4, h5, h6 {
-  /* font-family:'Times New Roman', Times, serif; */
-  color: var(--green);
+  font-family: -apple-system, "system-ui", "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  font-size: 21px;
+  line-height: 26px;
+  font-weight: normal;
+  letter-spacing: 0.025rem;
+
+  color: var(--border);
+
+  margin-top: 1.5em;
+  margin-bottom: 0.65em;
 }
 h3, h4, h5, h6 {
-  font-size: 1em;
+  font-size: 17px;
+  line-height: 22px;
 }
-h1, h2 {
-  font-weight: normal;
+p:last-child {
+  margin-bottom: 0;
 }
 
 a {
-  color: black;
-  text-decoration: none;
-  border-bottom: 1px solid rgba(0, 0, 0, 0.2);
+  color: var(--text);
+  text-decoration-color: var(--border);
+  text-decoration-thickness: 1px;
+  text-underline-position: under;
 }
 a:hover {
-  border-bottom: 1px solid var(--red);
+  text-decoration-color: var(--brown);
 }
 a:link,
 a:visited {
-  color: black;
+  color: var(--text);
 }
 
-img {
+img, video {
   max-width: 100%;
   height: auto;
+  margin-top: 0.5rem;
+}
+pre, blockquote, aside {
+  border: 1px solid var(--border);
+  margin: 0;
+  margin-top: 0.1rem;
+  margin-bottom: 1rem;
+}
+blockquote, aside {
+  padding: 0.75rem;
 }
 
-
-pre, blockquote, aside {
-  padding: 1em;
-  background: var(--light);
-  border-radius: 3px;
-  border: 1px solid var(--gray);
+code, pre, tt, kbd, samp {
+  font-family: "cmu_typewriter", 'Nimbus Mono PS', 'Courier New', monospace;
 }
 pre {
-  font-size: 0.8em;
   white-space: pre;
 }
 code {
-  background: var(--light);
-  border-radius: 3px;
-  padding: 2px;
+  background: var(--inlinecode);
+  padding: 1px 2px 0 2px;
   font-size: 0.9rem;
 }
 pre code {
+  background: none;
   overflow-x: auto;
   display: block;
-  font-size: 0.8rem;
+  line-height: 1.25;
+  padding: 0.5rem 0.75rem;;
 }
 
 header {
-  margin-bottom: 2em;
+  margin-bottom: 1.5rem;
 }
 footer {
-  margin-top: 5em;
+  margin-top: 2rem;
 }
+
 hr {
-  margin-top: 3em;
-  margin-bottom: 3em;
+  margin: 2rem 0;
   border: none;
   height: 1px;
-  color: var(--green); /* old IE */
-  background-color: var(--green); /* Modern Browsers */
+  color: var(--border); /* old IE */
+  background-color: var(--border); /* Modern Browsers */
 }
 
 table {
@@ -104,6 +130,19 @@ table {
 }
 table th,
 table td {
-  padding: 0.35em;
-  border: 1px solid var(--gray);
+  padding: 0.1rem 0.4rem 0 0.4rem;
+  border: 1px solid var(--border);
+}
+
+sup {
+  vertical-align: top;
+  position: relative;
+  top: -0.5em;
+  font-size: 0.7rem;
+}
+sup {
+  vertical-align: bottom;
+  position: relative;
+  top: 0.5em;
+  font-size: 0.7rem;
 }

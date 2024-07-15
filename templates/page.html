@@ -1,23 +1,24 @@
 {% extends "base.html" %}
 {% block url %}/{{ slug }}{% endblock url %}
 {% block style %}
-
   <link rel="stylesheet" href="/style.css">
   <link rel="stylesheet" href="/syntax.css">
 {% endblock style %}
 {% block content -%}
-      <h1>{{ base__name }}</h1>
-
       <header>
+        <p id="title"><a href="..">{{ base__name }}</a>/{{ slug }}</p>
+      </header>
+
+      <div class="head">
         <h1>{{ title }}</h1>
         <p>{{ date }}</p>
-        <p>{# word_length #}</p>
-      </header>
+      </div>
 
       <div class="contents">
         {{ contents }}
       </div>
+
+      <footer>
+        <a href="..">home</a>
+      </footer>
 {%- endblock content %}
-{% block footer -%}
-        <a href="..">back</a>
-{%- endblock footer %}

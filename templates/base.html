@@ -1,4 +1,4 @@
-{%- set base__name = "Kevin&#8217s blog" -%}
+{%- set base__name = "blog.kevin.garden" -%}
 <!DOCTYPE html>
 
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -18,15 +18,15 @@
   <meta property="og:image" content="">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:creator" content="@inchkev">
+
+  <link rel="stylesheet" href="/fonts.css">
   {%- block style %}{% endblock style -%}
 </head>
-
+{% block comments %}{% endblock comments %}
 <body>
   <main>
     <div class="content-wrapper">
       {% block content %}{% endblock content %}
-
-      <footer>{% block footer %}{% endblock footer %}</footer>
     </div>
   </main>
 </body>
