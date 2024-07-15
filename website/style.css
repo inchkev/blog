@@ -20,6 +20,9 @@ body {
   letter-spacing: 0.01rem;
 
   overflow-x: auto;
+  overflow-wrap: break-word;
+  word-wrap: break-word;
+  word-break: break-word;
   box-sizing: border-box;
 
   padding: 0.5rem;
