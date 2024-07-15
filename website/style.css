@@ -16,8 +16,8 @@ html, body {
 }
 
 body {
-  font-family: "cmu_serif", serif;
-  letter-spacing: 0.015rem;
+  font-family: "cmu_concrete", serif;
+  letter-spacing: 0.01rem;
 
   overflow-x: auto;
   box-sizing: border-box;

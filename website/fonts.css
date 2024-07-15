@@ -1,31 +1,31 @@
 @font-face {
-    font-family: 'cmu_serif';
-    src: url('fonts/cmunrm.woff2') format('woff2'),
-         url('fonts/cmunrm.woff') format('woff');
+    font-family: 'cmu_concrete';
+    src: url('fonts/cmunorm.woff2') format('woff2'),
+         url('fonts/cmunorm.woff') format('woff');
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
-    font-family: 'cmu_serif';
-    src: url('fonts/cmunti.woff2') format('woff2'),
-         url('fonts/cmunti.woff') format('woff');
+    font-family: 'cmu_concrete';
+    src: url('fonts/cmunoti.woff2') format('woff2'),
+         url('fonts/cmunoti.woff') format('woff');
     font-weight: normal;
     font-style: oblique;
 }
 
 @font-face {
-    font-family: 'cmu_serif';
-    src: url('fonts/cmunbx.woff2') format('woff2'),
-         url('fonts/cmunbx.woff') format('woff');
+    font-family: 'cmu_concrete';
+    src: url('fonts/cmunobx.woff2') format('woff2'),
+         url('fonts/cmunobx.woff') format('woff');
     font-weight: bold;
     font-style: normal;
 }
 
 @font-face {
-    font-family: 'cmu_serif';
-    src: url('fonts/cmunbi.woff2') format('woff2'),
-         url('fonts/cmunbi.woff') format('woff');
+    font-family: 'cmu_concrete';
+    src: url('fonts/cmunobi.woff2') format('woff2'),
+         url('fonts/cmunobi.woff') format('woff');
     font-weight: bold;
     font-style: oblique;
 }
