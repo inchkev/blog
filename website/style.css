@@ -30,15 +30,13 @@ body {
   padding: 0.75rem;
 
   background-image: -webkit-image-set(
-    url("background.avif") type("image/avif"),
-    url("background.webp") type("image/webp"),
-    url("background.jpg") type("image/jpg")
-  );
+    url("background.avif"),
+    url("background.webp"),
+    url("background.jpg"));
   background-image: image-set(
     url("background.avif") type("image/avif"),
     url("background.webp") type("image/webp"),
-    url("background.jpg") type("image/jpg")
-  );
+    url("background.jpg") type("image/jpg"));
   min-height: 100vh;
 }
 
