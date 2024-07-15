@@ -66,7 +66,7 @@ a {
   color: var(--text);
   text-decoration-color: var(--border);
   text-decoration-thickness: 1px;
-  text-underline-position: under;
+  text-underline-offset: 0.23rem;
 }
 a:hover {
   text-decoration-color: var(--brown);
