@@ -101,7 +101,10 @@ fn main() -> Result<()> {
 
             let yaml_matter = Matter::<YAML>::new();
             let result = yaml_matter.parse(&file_contents);
-            let front_matter = result.data.unwrap().deserialize::<FrontMatter>()?;
+            let Some(Ok(front_matter)) = result.data.map(|data| data.deserialize::<FrontMatter>())
+            else {
+                continue;
+            };
             let contents = result.content;
 
             if front_matter.draft {
