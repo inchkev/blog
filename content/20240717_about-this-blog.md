@@ -8,5 +8,6 @@ Men will really do anything but write. Two months ago I wanted to start a blog t
 ## Colophon
 
 - Source code: https://github.com/inchkev/blog
+- Used: Rust, HTML, CSS
 - Fonts: [CMU Concrete and CMU Typewriter](https://www.fontsquirrel.com/fonts/computer-modern) by Donald Knuth and whatever system-ui serif font stack github uses
 - Background photo by me
