@@ -1,63 +1,63 @@
 @font-face {
     font-family: 'cmu_concrete';
-    src: url('fonts/cmunorm.woff2') format('woff2'),
-         url('fonts/cmunorm.woff') format('woff');
+    src: url('_fonts/cmunorm.woff2') format('woff2'),
+         url('_fonts/cmunorm.woff') format('woff');
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'cmu_concrete';
-    src: url('fonts/cmunoti.woff2') format('woff2'),
-         url('fonts/cmunoti.woff') format('woff');
+    src: url('_fonts/cmunoti.woff2') format('woff2'),
+         url('_fonts/cmunoti.woff') format('woff');
     font-weight: normal;
     font-style: oblique;
 }
 
 @font-face {
     font-family: 'cmu_concrete';
-    src: url('fonts/cmunobx.woff2') format('woff2'),
-         url('fonts/cmunobx.woff') format('woff');
+    src: url('_fonts/cmunobx.woff2') format('woff2'),
+         url('_fonts/cmunobx.woff') format('woff');
     font-weight: bold;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'cmu_concrete';
-    src: url('fonts/cmunobi.woff2') format('woff2'),
-         url('fonts/cmunobi.woff') format('woff');
+    src: url('_fonts/cmunobi.woff2') format('woff2'),
+         url('_fonts/cmunobi.woff') format('woff');
     font-weight: bold;
     font-style: oblique;
 }
 
 @font-face {
     font-family: 'cmu_typewriter';
-    src: url('fonts/cmuntt.woff2') format('woff2'),
-         url('fonts/cmuntt.woff') format('woff');
+    src: url('_fonts/cmuntt.woff2') format('woff2'),
+         url('_fonts/cmuntt.woff') format('woff');
     font-weight: normal;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'cmu_typewriter';
-    src: url('fonts/cmunit.woff2') format('woff2'),
-         url('fonts/cmunit.woff') format('woff');
+    src: url('_fonts/cmunit.woff2') format('woff2'),
+         url('_fonts/cmunit.woff') format('woff');
     font-weight: normal;
     font-style: oblique;
 }
 
 @font-face {
     font-family: 'cmu_typewriter';
-    src: url('fonts/cmuntb.woff2') format('woff2'),
-         url('fonts/cmuntb.woff') format('woff');
+    src: url('_fonts/cmuntb.woff2') format('woff2'),
+         url('_fonts/cmuntb.woff') format('woff');
     font-weight: bold;
     font-style: normal;
 }
 
 @font-face {
     font-family: 'cmu_typewriter';
-    src: url('fonts/cmuntx.woff2') format('woff2'),
-         url('fonts/cmuntx.woff') format('woff');
+    src: url('_fonts/cmuntx.woff2') format('woff2'),
+         url('_fonts/cmuntx.woff') format('woff');
     font-weight: bold;
     font-style: oblique;
 }

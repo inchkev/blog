@@ -15,12 +15,15 @@ use tera::Tera;
 use walkdir::WalkDir;
 
 mod html;
+mod state;
+use state::{calculate_sha256_hash, StateManager};
 
 lazy_static! {
     static ref CONTENT_DIR: PathBuf = "content".into();
     static ref TEMPLATE_DIR: PathBuf = "templates".into();
     static ref THEME_DIR: PathBuf = "themes".into();
     static ref WEBSITE_DIR: PathBuf = "website".into();
+    static ref STATE_FILE: PathBuf = "state.json".into();
 }
 
 fn tera() -> &'static Tera {
@@ -88,6 +91,8 @@ fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
 fn main() -> Result<()> {
     let mut posts = Vec::new();
 
+    let mut state = StateManager::from_state_file(&*STATE_FILE).unwrap_or_default();
+
     for entry in WalkDir::new(&*CONTENT_DIR)
         .into_iter()
         .filter_map(|e| e.ok())
@@ -101,13 +106,31 @@ fn main() -> Result<()> {
 
             let yaml_matter = Matter::<YAML>::new();
             let result = yaml_matter.parse(&file_contents);
+
             let Some(Ok(front_matter)) = result.data.map(|data| data.deserialize::<FrontMatter>())
             else {
                 continue;
             };
+            if front_matter.draft {
+                continue;
+            }
+
             let contents = result.content;
 
-            if front_matter.draft {
+            let slug = front_matter
+                .slug
+                .unwrap_or_else(|| get_slug_from_path(&path));
+
+            // Skip if contents haven't changed
+            let file_checksum = calculate_sha256_hash(&file_contents)?;
+            if !state.contents_changed(&slug, &file_checksum) {
+                state.add_or_keep(&slug, &file_checksum);
+                posts.push(HashMap::from([
+                    ("title", front_matter.title.clone()),
+                    ("slug", slug.clone()),
+                    ("date", front_matter.date.clone()),
+                ]));
+                println!(" done (no changes)");
                 continue;
             }
 
@@ -120,10 +143,6 @@ fn main() -> Result<()> {
                 },
             };
             let html_contents = markdown::to_html_with_options(&contents, &options).unwrap();
-
-            let slug = front_matter
-                .slug
-                .unwrap_or_else(|| get_slug_from_path(&path));
 
             // create directory for page
             let page_dir = WEBSITE_DIR.join(&slug);
@@ -149,11 +168,19 @@ fn main() -> Result<()> {
             let mut output_file = File::create(output_path)?;
             output_file.write_all(rendered.as_bytes())?;
 
+            state.add_or_keep(&slug, &file_checksum);
             println!(" done");
 
             posts.push(post_context);
         }
     }
+
+    // delete stale files
+    for slug in state.get_stale_slugs().iter() {
+        fs::remove_dir_all(WEBSITE_DIR.join(slug)).unwrap();
+    }
+    // save new state file
+    state.write_state_file(&*STATE_FILE)?;
 
     let index_context = HashMap::from([("posts", &posts)]);
 

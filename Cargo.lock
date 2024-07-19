@@ -45,6 +45,12 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0c4b4d0bd25bd0b74681c0ad21497610ce1b7c91b1022cd21c80c6fbdd9476b0"
 
 [[package]]
+name = "base16ct"
+version = "0.2.0"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4c7f02d4ea65f2c1853089ffd8d2787bdbc63de2f0d29dedbcf8ccdfa0ccd4cf"
+
+[[package]]
 name = "base64"
 version = "0.21.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -85,6 +91,7 @@ name = "blog"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "base16ct",
  "gray_matter",
  "imagesize",
  "kuchikiki",
@@ -92,6 +99,8 @@ dependencies = [
  "markdown",
  "regex",
  "serde",
+ "serde_json",
+ "sha2",
  "syntect",
  "tera",
  "walkdir",
