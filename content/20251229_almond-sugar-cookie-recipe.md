@@ -38,6 +38,7 @@ I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for
 
 Store cookies in an airtight container at room temp. They’ll probably last up to a week, if someone would like to test this for me.
 
+![](IMG_7762.jpg)
 ## Notes
 
 - If you prefer your cookies closer in sweetness to a standard sugar cookie, add up to an additional ½ cup sugar (but this may change the baking time).
