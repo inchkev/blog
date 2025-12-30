@@ -33,7 +33,7 @@ I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for
 1. In a food processor, combine all-purpose flour, almond flour, sliced almonds, baking soda, baking powder, and salt. Pulse until the mixture is uniform and the sliced almonds are in small pieces, about the size of coarse breadcrumbs.
 2. In the bowl of an electric mixer, beat together the butter and sugar until fluffy. Beat in the egg and egg white until creamy, then add the almond extract.
 3. Add the flour mixture to the butter mixture and beat on low or mix with a rubber spatula until no dry spots remain. Cover and refrigerate dough until hard enough to scoop, about 30 minutes and up to 12 hours.
-4. When ready to bake, preheat oven to 350 degrees. Line 2 baking sheets with parchment paper.
+4. When ready to bake, preheat oven to 350°F (180°C). Line 2 baking sheets with parchment paper.
 5. Scoop 3 tablespoon mounds of dough (or using a #20 scoop) onto baking sheets, sprinkling them generously with turbinado sugar. Place them at least 2 inches apart and bake until the cookies have leveled out and the edges become slightly golden, 18 to 22 minutes. Immediately after pulling cookies from oven, top with flaky sea salt. Let cool for 5 minutes on the baking sheet before transferring to racks to cool completely.
 
 Store cookies in an airtight container at room temp. They’ll probably last up to a week, if someone would like to test this for me.
