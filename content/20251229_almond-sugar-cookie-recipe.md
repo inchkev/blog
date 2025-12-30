@@ -16,7 +16,7 @@ I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for
 
 - 1½ cups all-purpose flour
 - 1 cup superfine blanched almond flour
-- 1 cup sliced almonds
+- 1 cup sliced almonds, untoasted
 - 1 tsp baking soda
 - ½ tsp baking powder
 - 1 tsp kosher salt (Diamond Crystal)
