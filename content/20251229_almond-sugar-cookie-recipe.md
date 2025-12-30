@@ -8,7 +8,7 @@ These cookies have the form factor and tender center of a classic American sugar
 
 I came up with this over the holidays when my sister first requested I make sugar cookies, then later we shared a frangipane tart from Whole Foods, to which she said she loved almond-flavored desserts, something I never knew about her. I had already bought turbinado sugar to make sugar cookies but now I really wanted to make Italian pignoli or ricciarelli cookies. I ended up making neither.
 
-I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for almond sugar cookies (which they adapted from All Recipes). [^1] I used some ingredient additions and ratios (less butter, added egg white instead of yolk) from Vaughn Vreeland’s NYT recipe for rum-buttered almond cookies. [^2] Finally, I reduced the sugar to suit my palate following a recipe for Chinese almond cookies. [^3]
+I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for almond sugar cookies (which they adapted from All Recipes). [^1] I used some ingredient additions and ratios (less butter, addition of egg white instead of yolk) from Vaughn Vreeland’s NYT recipe for rum-buttered almond cookies. [^2] Finally, I reduced the sugar to suit my palate (see notes) following a recipe for Chinese almond cookies. [^3]
 
 ## Ingredients
 
@@ -41,7 +41,7 @@ Store cookies in an airtight container at room temp. They’ll probably last up 
 ![](IMG_7762.jpg)
 ## Notes
 
-- If you prefer your cookies closer in sweetness to a standard sugar cookie, add up to an additional ½ cup sugar (but this may change the baking time).
+- If you prefer your cookies closer in sweetness to a standard sugar cookie, add up to an additional ½ cup sugar (this will change the baking time - you’re on your own).
 - If you’re using Morton’s kosher salt, reduce to ½ tsp instead of 1 tsp.
 - You can use a hand whisk instead of an electric mixer; creaming butter manually isn’t that bad.
 - A #20 cookie scoop is also all my parents had at home so these cookies turned out rather large. If you used something smaller like a #30 scoop (~2 tablespoons), they’d bake faster and you could probably get 25+ cookies. But they’d take up three trays.
