@@ -1,9 +1,9 @@
 :root {
-  --backgroundcolor: rgb(80,94,16);
+  --backgroundcolor: #dce8ed;
   --green: #008400;
   --brown: #b06200;
   --text: #003000;
-  --border: #008400;
+  --border: #008400db;
   --inlinecode: #00840012;
 }
 

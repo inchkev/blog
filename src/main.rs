@@ -171,7 +171,7 @@ fn main() -> Result<()> {
             state.add_or_keep(&slug, &file_checksum);
             println!(" done");
 
-            posts.push(post_context);
+            posts.insert(0, post_context);
         }
     }
 
