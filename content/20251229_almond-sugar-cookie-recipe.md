@@ -44,7 +44,7 @@ Store cookies in an airtight container at room temp. They’ll probably last up 
 - If you prefer your cookies closer in sweetness to a standard sugar cookie, add up to an additional ½ cup sugar (this will change the baking time - you’re on your own).
 - If you’re using Morton’s kosher salt, reduce to ½ tsp instead of 1 tsp.
 - You can use a hand whisk instead of an electric mixer; creaming butter manually isn’t that bad.
-- A #20 cookie scoop is also all my parents had at home so these cookies turned out rather large. If you used something smaller like a #30 scoop (~2 tablespoons), they’d bake faster and you could probably get 25+ cookies. But they’d take up three trays.
+- A #20 cookie scoop is what my parents had in their kitchen so these cookies turned out rather large. If you used a smaller scoop like a #30 (~2 tablespoons), they’d bake faster and you could probably get 25+ cookies. But then they’d also take up three trays.
 
 [^1]: https://www.reddit.com/r/Baking/comments/15ruwxm/comment/jwap2a8/ [Archived](https://archive.ph/rRXEu)
 [^2]: https://cooking.nytimes.com/recipes/1026334-rum-buttered-almond-cookies [Archived](https://archive.ph/f3515)
