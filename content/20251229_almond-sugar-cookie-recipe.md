@@ -34,14 +34,14 @@ I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for
 2. In the bowl of an electric mixer, beat together the butter and sugar until fluffy. Beat in the egg and egg white until creamy, then add the almond extract.
 3. Add the flour mixture to the butter mixture and beat on low or mix with a rubber spatula until no dry spots remain. Cover and refrigerate dough until hard enough to scoop, about 30 minutes and up to 12 hours.
 4. When ready to bake, preheat oven to 350°F (180°C). Line 2 baking sheets with parchment paper.
-5. Scoop 3 tablespoon mounds of dough (or using a #20 scoop) onto baking sheets, sprinkling them generously with turbinado sugar. Place them at least 2 inches apart and bake until the cookies have leveled out and the edges become slightly golden, 18 to 22 minutes. Immediately after pulling cookies from oven, top with flaky sea salt. Let cool for 5 minutes on the baking sheet before transferring to racks to cool completely.
+5. Scoop 3 tablespoon mounds of dough (or using a #20 scoop) onto baking sheets, sprinkling them generously with turbinado sugar. Place them at least 2 inches apart and bake until the cookies have leveled out and the edges become slightly golden, 18 to 22 minutes. Immediately after pulling cookies from oven, top with flaky salt. Let cool for 5 minutes on the baking sheet before transferring to racks to cool completely.
 
 Store cookies in an airtight container at room temp. They’ll probably last up to a week, if someone would like to test this for me.
 
 ![](IMG_7762.jpg)
 ## Notes
 
-- If you prefer your cookies closer in sweetness to a standard sugar cookie, add up to an additional ½ cup sugar (this will change the baking time - you’re on your own).
+- If you prefer your cookies closer in sweetness to a standard sugar cookie, add an additional ¼ to ½ cup sugar (this will change the baking time - you’re on your own).
 - If you’re using Morton’s kosher salt, reduce to ½ tsp instead of 1 tsp.
 - You can use a hand whisk instead of an electric mixer; creaming butter manually isn’t that bad.
 - A #20 cookie scoop is what my parents had in their kitchen so these cookies turned out rather large. If you used a smaller scoop like a #30 (~2 tablespoons), they’d bake faster and you could probably get 25+ cookies. But then they’d also take up three trays.
