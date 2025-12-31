@@ -4,7 +4,7 @@ use serde::{Deserialize, Serialize};
 
 #[derive(Debug, Deserialize, Serialize)]
 pub struct PageFrontMatter {
-    title: Box<str>,
+    title: Option<Box<str>>,
     date: Box<str>,
     slug: Option<Box<str>>,
     #[serde(default)]
@@ -14,8 +14,8 @@ pub struct PageFrontMatter {
 }
 
 impl PageFrontMatter {
-    pub fn title(&self) -> &str {
-        &self.title
+    pub fn title(&self) -> Option<&str> {
+        self.title.as_deref()
     }
 
     pub fn date(&self) -> &str {

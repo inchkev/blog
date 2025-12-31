@@ -71,12 +71,14 @@ fn load_syntax_theme(theme: &str) -> Result<()> {
     Ok(())
 }
 
-fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
-    path.as_ref()
-        .file_stem()
-        .and_then(|stem| stem.to_str()?.split_once('_').map(|x| x.1))
-        .unwrap_or_default()
-        .to_owned()
+fn try_get_slug_from_path<P: AsRef<Path>>(path: P) -> Option<String> {
+    let stem = path.as_ref().file_stem()?.to_str()?;
+    let (_date, slug) = stem.split_once('_')?;
+    if slug.is_empty() {
+        None
+    } else {
+        Some(slug.to_owned())
+    }
 }
 
 fn main() -> Result<()> {
@@ -95,6 +97,7 @@ fn main() -> Result<()> {
 
     // Walk files from newest to oldest creation time
     for entry in WalkDir::new(&*CONTENT_DIR)
+        .max_depth(1)
         .sort_by_key(|entry| Reverse(entry.metadata().ok().and_then(|m| m.created().ok())))
         .into_iter()
         .filter_map(std::result::Result::ok)
@@ -116,12 +119,21 @@ fn main() -> Result<()> {
                 continue;
             }
 
-            let slug = front_matter
-                .slug()
-                .map_or_else(|| get_slug_from_path(&path), Into::into);
+            let slug = if let Some(s) = front_matter.slug() {
+                s.to_string()
+            } else {
+                let Some(s) = try_get_slug_from_path(&path) else {
+                    println!("skipped (no slug)");
+                    continue;
+                };
+                s
+            };
 
-            let front_page_info =
-                FrontPageInfo::new(front_matter.title(), front_matter.date(), slug.clone());
+            let front_page_info = FrontPageInfo::new(
+                front_matter.title().unwrap_or(&slug),
+                front_matter.date(),
+                slug.clone(),
+            );
 
             // Skip if contents haven't changed
             let file_checksum = calculate_sha256_hash(&file_contents);

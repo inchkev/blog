@@ -1,6 +1,6 @@
 ---
-date: 2025-12-29
 title: Almond sugar cookies
+date: 2025-12-29
 ---
 Happy 2025! Haha.
 
