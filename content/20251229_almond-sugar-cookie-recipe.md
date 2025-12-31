@@ -36,7 +36,7 @@ I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for
 4. When ready to bake, preheat oven to 350°F (180°C). Line 2 baking sheets with parchment paper.
 5. Scoop 3 tablespoon mounds of dough (or using a #20 scoop) onto baking sheets, sprinkling them generously with turbinado sugar. Place them at least 2 inches apart and bake until the cookies have leveled out and the edges become slightly golden, 18 to 22 minutes. Immediately after pulling cookies from oven, top with flaky salt. Let cool for 5 minutes on the baking sheet before transferring to racks to cool completely.
 
-Store cookies in an loosely sealed tin/container with a paper towel at room temp. If you store them in an airtight container, the edges will lose their crispiness. They’ll probably last up to a week, but I haven’t been able to test this.
+Store cookies in an loosely sealed tin/container at room temp with a paper towel. If you store them in an airtight container, the edges will lose their crispiness. They’ll probably last up to a week, but I haven’t been able to test this.
 
 ![](IMG_7762.jpg)
 ## Notes
