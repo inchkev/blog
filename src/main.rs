@@ -1,60 +1,55 @@
 use std::{
+    cmp::Reverse,
     collections::HashMap,
     fs::{self, File},
     io::Write,
     path::{Path, PathBuf},
-    sync::OnceLock,
+    sync::LazyLock,
 };
 
 use anyhow::Result;
-use gray_matter::{engine::YAML, Matter};
+use gray_matter::ParsedEntity;
 use kuchikiki::traits::TendrilSink;
-use lazy_static::lazy_static;
-use serde::Deserialize;
-use tera::Tera;
 use walkdir::WalkDir;
 
 mod html;
 mod state;
+mod types;
 use state::{calculate_sha256_hash, StateManager};
+use types::{FrontPageInfo, PageFrontMatter};
 
-lazy_static! {
-    static ref CONTENT_DIR: PathBuf = "content".into();
-    static ref TEMPLATE_DIR: PathBuf = "templates".into();
-    static ref THEME_DIR: PathBuf = "themes".into();
-    static ref WEBSITE_DIR: PathBuf = "website".into();
-    static ref STATE_FILE: PathBuf = "state.json".into();
+static CONTENT_DIR: LazyLock<PathBuf> = LazyLock::new(|| "content".into());
+static TEMPLATE_DIR: LazyLock<PathBuf> = LazyLock::new(|| "templates".into());
+static THEME_DIR: LazyLock<PathBuf> = LazyLock::new(|| "themes".into());
+static WEBSITE_DIR: LazyLock<PathBuf> = LazyLock::new(|| "website".into());
+static STATE_FILE: LazyLock<PathBuf> = LazyLock::new(|| "state.json".into());
+
+fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
+    use gray_matter::{engine::YAML, Matter};
+    static MATTER: LazyLock<Matter<YAML>> = LazyLock::new(Matter::<YAML>::new);
+    &MATTER
 }
 
-fn tera() -> &'static Tera {
-    static TERA: OnceLock<Tera> = OnceLock::new();
-    TERA.get_or_init(|| {
-        let mut tera = Tera::new(&TEMPLATE_DIR.join("*.html").to_string_lossy()).unwrap();
-        // don't autoescape anything
+fn tera() -> &'static tera::Tera {
+    static TERA: LazyLock<tera::Tera> = LazyLock::new(|| {
+        let mut tera = tera::Tera::new(&TEMPLATE_DIR.join("*.html").to_string_lossy()).unwrap();
         tera.autoescape_on(vec![]);
         tera
-    })
+    });
+    &TERA
 }
 
 pub fn ss() -> &'static syntect::parsing::SyntaxSet {
-    static PS: OnceLock<syntect::parsing::SyntaxSet> = OnceLock::new();
-    PS.get_or_init(syntect::parsing::SyntaxSet::load_defaults_newlines)
+    static PS: LazyLock<syntect::parsing::SyntaxSet> =
+        LazyLock::new(syntect::parsing::SyntaxSet::load_defaults_newlines);
+    &PS
 }
 
 #[allow(dead_code)]
 fn ts() -> &'static syntect::highlighting::ThemeSet {
-    static PS: OnceLock<syntect::highlighting::ThemeSet> = OnceLock::new();
-    PS.get_or_init(|| syntect::highlighting::ThemeSet::load_from_folder(&*THEME_DIR).unwrap())
-}
-
-#[derive(Deserialize)]
-#[allow(dead_code)]
-struct FrontMatter {
-    title: String,
-    date: String,
-    slug: Option<String>,
-    #[serde(default)]
-    draft: bool,
+    static PS: LazyLock<syntect::highlighting::ThemeSet> =
+        LazyLock::new(|| syntect::highlighting::ThemeSet::load_from_folder(&*THEME_DIR).unwrap());
+    &PS
 }
 
 fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> String {
@@ -89,13 +84,15 @@ fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
 }
 
 fn main() -> Result<()> {
-    let mut posts = Vec::new();
+    let mut posts = Vec::<FrontPageInfo>::new();
 
     let mut state = StateManager::from_state_file(&*STATE_FILE).unwrap_or_default();
 
+    // Walk files from newest to oldest creation time
     for entry in WalkDir::new(&*CONTENT_DIR)
+        .sort_by_key(|entry| Reverse(entry.metadata().ok().and_then(|m| m.created().ok())))
         .into_iter()
-        .filter_map(|e| e.ok())
+        .filter_map(std::result::Result::ok)
     {
         let path = entry.into_path();
         if path.is_file() && path.extension().is_some_and(|s| s == "md") {
@@ -103,33 +100,27 @@ fn main() -> Result<()> {
             std::io::stdout().flush()?;
 
             let file_contents = fs::read_to_string(&path)?;
-
-            let yaml_matter = Matter::<YAML>::new();
-            let result = yaml_matter.parse(&file_contents);
-
-            let Some(Ok(front_matter)) = result.data.map(|data| data.deserialize::<FrontMatter>())
-            else {
+            let parsed_file: ParsedEntity = yaml_matter().parse(&file_contents)?;
+            let Some(front_matter_data) = parsed_file.data else {
                 continue;
             };
-            if front_matter.draft {
+            let front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
+            if front_matter.draft() {
                 continue;
             }
 
-            let contents = result.content;
-
             let slug = front_matter
-                .slug
-                .unwrap_or_else(|| get_slug_from_path(&path));
+                .slug()
+                .map_or_else(|| get_slug_from_path(&path), Into::into);
+
+            let front_page_info =
+                FrontPageInfo::new(front_matter.title(), front_matter.date(), slug.clone());
 
             // Skip if contents haven't changed
-            let file_checksum = calculate_sha256_hash(&file_contents)?;
+            let file_checksum = calculate_sha256_hash(&file_contents);
             if !state.contents_changed(&slug, &file_checksum) {
                 state.add_or_keep(&slug, &file_checksum);
-                posts.push(HashMap::from([
-                    ("title", front_matter.title.clone()),
-                    ("slug", slug.clone()),
-                    ("date", front_matter.date.clone()),
-                ]));
+                posts.push(front_page_info);
                 println!(" done (no changes)");
                 continue;
             }
@@ -142,7 +133,8 @@ fn main() -> Result<()> {
                     ..markdown::CompileOptions::gfm()
                 },
             };
-            let html_contents = markdown::to_html_with_options(&contents, &options).unwrap();
+            let html_contents =
+                markdown::to_html_with_options(&parsed_file.content, &options).unwrap();
 
             // create directory for page
             let page_dir = WEBSITE_DIR.join(&slug);
@@ -154,13 +146,16 @@ fn main() -> Result<()> {
             // - copies images to each page's directory
             let html_contents = process_html(&html_contents, &page_dir);
 
-            let post_context = HashMap::from([
-                ("title", front_matter.title.clone()),
-                ("slug", slug.clone()),
-                ("date", front_matter.date.clone()),
-                ("contents", html_contents),
-            ]);
+            let mut post_context = front_page_info.to_map();
+            post_context.insert("contents", &html_contents);
+            post_context.extend(
+                front_matter
+                    .all_else()
+                    .iter()
+                    .map(|(k, v)| (k.as_ref(), v.as_ref())),
+            );
 
+            // Render article page
             let rendered =
                 tera().render("page.html", &tera::Context::from_serialize(&post_context)?)?;
 
@@ -171,19 +166,22 @@ fn main() -> Result<()> {
             state.add_or_keep(&slug, &file_checksum);
             println!(" done");
 
-            posts.insert(0, post_context);
+            posts.push(front_page_info);
         }
     }
 
-    // delete stale files
-    for slug in state.get_stale_slugs().iter() {
+    // Delete stale files
+    for slug in &state.get_stale_slugs() {
         fs::remove_dir_all(WEBSITE_DIR.join(slug)).unwrap();
     }
-    // save new state file
+    // Save new state file
     state.write_state_file(&*STATE_FILE)?;
 
+    // Render home page.
+    // Sort posts in reverse "date" field order (should be mostly sorted already,
+    // since we've walked the directory in reverse file creation date.
+    posts.sort_by(|a, b| b.date().cmp(a.date()));
     let index_context = HashMap::from([("posts", &posts)]);
-
     let rendered = tera().render("index.html", &tera::Context::from_serialize(index_context)?)?;
 
     let index_path = WEBSITE_DIR.join("index.html");

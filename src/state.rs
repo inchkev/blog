@@ -31,10 +31,11 @@ impl StateManager {
         let json_data = fs::read_to_string(path)?;
         let articles = serde_json::from_str::<Articles>(&json_data)?;
 
-        let mut map = HashMap::new();
-        for article in articles.articles.iter() {
-            map.insert(article.slug.clone(), article.checksum.clone());
-        }
+        let map = articles
+            .articles
+            .iter()
+            .map(|article| (article.slug.clone(), article.checksum.clone()))
+            .collect::<HashMap<_, _>>();
 
         Ok(Self {
             articles: Some(articles),
@@ -51,7 +52,7 @@ impl StateManager {
     }
 
     pub fn add_or_keep(&mut self, slug: &str, checksum: &str) {
-        _ = self.changed.insert(slug.to_owned(), checksum.to_owned())
+        _ = self.changed.insert(slug.to_owned(), checksum.to_owned());
     }
 
     pub fn get_stale_slugs(&self) -> Vec<String> {
@@ -68,24 +69,25 @@ impl StateManager {
     }
 
     pub fn write_state_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
-        let mut articles = vec![];
-        for (slug, checksum) in self.changed.iter() {
-            articles.push(Article {
+        let articles: Vec<Article> = self
+            .changed
+            .iter()
+            .map(|(slug, checksum)| Article {
                 slug: slug.clone(),
                 checksum: checksum.clone(),
-            });
-        }
+            })
+            .collect();
         let data = serde_json::to_string(&Articles { articles })?;
         fs::write(path, data)?;
         Ok(())
     }
 }
 
-pub fn calculate_sha256_hash(content: &str) -> Result<String> {
+pub fn calculate_sha256_hash(content: &str) -> String {
     let hash = Sha256::digest(content);
 
     // serialize as 64-length hex string
     let mut hex_hash_buf = [0u8; 64];
     let hex_hash = base16ct::lower::encode_str(&hash, &mut hex_hash_buf).unwrap();
-    Ok(hex_hash.to_string())
+    hex_hash.to_string()
 }

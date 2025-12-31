@@ -1,4 +1,4 @@
-{% extends "base.html" %}
+{% extends "header.html" %}
 {% block url %}/{{ slug }}{% endblock url %}
 {% block style %}
   <link rel="stylesheet" href="/style.css">
@@ -12,7 +12,7 @@
       <div class="article">
         <div class="head">
           <h1>{{ title }}</h1>
-          <p>{{ date }}</p>
+          <p>{{ date }}{% if updated %}, <i>updated {{ updated }}</i>{% endif %}</p>
         </div>
 
         <div class="contents">

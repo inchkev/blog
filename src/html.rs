@@ -48,7 +48,7 @@ pub fn syntax_highlight_code_blocks(document: &NodeRef) {
     for code_tag in document.select("pre code").unwrap() {
         let Some(class) = ({
             let attributes = code_tag.attributes.borrow();
-            attributes.get("class").map(|s| s.to_owned())
+            attributes.get("class").map(ToOwned::to_owned)
         }) else {
             continue;
         };

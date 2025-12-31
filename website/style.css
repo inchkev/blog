@@ -1,10 +1,19 @@
 :root {
-  --backgroundcolor: #dce8ed;
+  /* backgrounds */
+  --bg-image-color: #dce8ed;
+  --bg-main: #ffffffeb;
+  /* accents */
   --green: #008400;
+    --text: #003000;
+    --border: #008400db;
   --brown: #b06200;
-  --text: #003000;
-  --border: #008400db;
-  --inlinecode: #00840012;
+    --hyperlink: #7e4b0c;
+    --hr: #b0620099; 
+  --magenta: #bd1c90;
+    --hyperlink-code: #92166f;
+    --bg-inline-code: #f2e3eaaf;
+    --bg-accent: #f7eef2c2;
+    --border-accent: #92156ea0;
 }
 
 html, body {
@@ -14,8 +23,8 @@ html, body {
   text-size-adjust: none;
   -webkit-text-size-adjust: 100%;
   font-size: 16px;
-  line-height: 22px;
-  background-color: var(--backgroundcolor);
+  line-height: 21.5px;
+  background-color: var(--bg-image-color);
 }
 
 body {
@@ -47,21 +56,19 @@ body {
 .content {
   display: flex;
   flex-direction: column;
-  gap: 0.4rem;
-  /* border: 1px solid white; */
-  /* padding: 0.5em; */
-  /* border-radius: 1.5rem; */
+  gap: 0.45rem;
+  max-width: 45rem;
+  border: 2px dotted var(--border);
+  padding: 0.5em;
+  border-radius: 1.5rem;
 }
 header, footer, .posts, .article {
-  border: 1px solid var(--border);
-  border-radius: 1rem;
-  max-width: 40rem;
+  background-color: var(--bg-main);
   margin: 0;
-  background-color: rgba(255,255,255,0.92);
 }
 header, footer {
-  background-color: rgba(255,255,255,0.8);
-  padding: 0.45rem 1.5rem;
+  background-color: var(--bg-main);
+  padding: 0.43rem 1.5rem 0.4rem 1.5rem;
 }
 section.footnotes {
   margin-bottom: 0.35rem;
@@ -80,61 +87,89 @@ section.footnotes {
   margin-top: 0;
   margin-bottom: 0.2rem;
 }
-.head p {
-  color: var(--green);
+.head * {
+  color: var(--magenta);
 }
 .post {
   margin-bottom: 0;
 }
 p, h1, h2, h3, h4, h5, h6, table, ul, ol {
   margin-top: 0;
-  margin-bottom: 0.75rem;
+  margin-bottom: 0.6rem;
 }
 p strong, p b {
   letter-spacing: -0.01rem;
 }
 h1, h2, h3, h4, h5, h6 {
   font-family: -apple-system, "system-ui", "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
-  font-size: 22px;
-  line-height: 26px;
   font-weight: normal;
-  letter-spacing: 0.03rem;
+  line-height: 26px;
 
-  color: var(--border);
+  color: var(--green);
 
   margin-top: 1.25em;
   margin-bottom: 0.65em;
 }
-h3, h4, h5, h6 {
-  font-size: 18px;
-  line-height: 22px;
+h1 {
+  font-size: 26px;
+  line-height: 30px;
+}
+h2 {
+  font-size: 22px;
+  line-height: 30px;
+  letter-spacing: 0.02rem;
+}
+section.footnotes h2 {
+  color: var(--brown);
+}
+h3, h4 {
+  font-size: 19px;
+  line-height: 26px;
+  letter-spacing: 0.03rem;
+}
+h5, h6 {
+  font-size: 16px;
+  line-height: 26px;
 }
 p:last-child, ol:last-child, ul:last-child {
   margin-bottom: 0;
 }
 
 a {
-  color: var(--text);
-  text-decoration-color: var(--border);
+  color: var(--hyperlink);
+  text-decoration-color: var(--hyperlink);
   text-decoration-thickness: 1px;
-  text-underline-offset: 0.23rem;
+  text-decoration-style: dotted;
+  text-underline-offset: 0.2rem;
 }
-a:link,
-a:visited {
-  color: var(--text);
+a:link, a:visited {
+  color: var(--hyperlink);
 }
-a:hover {
+code a:link, code a:visited, a:link code, a:visited code {
+  color: var(--hyperlink-code);
+}
+header a:link, header a:visited, footer a:link, footer a:visited {
   color: var(--green);
+  text-decoration-color: var(--green);
+}
+a:hover,
+code a:hover, a:hover code,
+header a:hover, footer a:hover {
+  color: var(--magenta);
+  text-decoration-color: var(--magenta);
 }
 
+/* MEDIA */
 img, video {
   max-width: 100%;
   height: auto;
   margin-top: 0.5rem;
 }
+/* CODE BLOCKS, QUOTES, ASIDES */
 pre, blockquote, aside {
-  border: 1px solid var(--border);
-  border-radius: 0.5rem;
+  border: 1px dotted var(--border-accent);
+  border-radius: 0.2rem;
+  background-color: var(--bg-accent);
   margin: 0;
   margin-top: 0.1rem;
   margin-bottom: 1rem;
@@ -150,7 +185,7 @@ pre {
   white-space: pre;
 }
 code {
-  background: var(--inlinecode);
+  background: var(--bg-inline-code);
   padding: 1px 2px 0 2px;
   font-size: 0.9rem;
 }
@@ -165,16 +200,20 @@ pre code {
 table {
   border-collapse: collapse;
 }
+thead {
+  background-color: var(--bg-accent);
+}
 table th, table td {
   padding: 0.1rem 0.4rem 0 0.4rem;
-  border: 1px solid var(--border);
+  border: 1px solid var(--border-accent);
 }
+/* HORIZONTAL DIVIDER */
 hr {
   margin: 2rem 0;
   border: none;
   height: 1px;
-  color: var(--border); /* old IE */
-  background-color: var(--border); /* Modern Browsers */
+  color: var(--hr); /* old IE */
+  background-color: var(--hr); /* modern browser */
 }
 sup {
   vertical-align: top;
