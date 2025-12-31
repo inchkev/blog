@@ -46,14 +46,17 @@ fn ts() -> &'static syntect::highlighting::ThemeSet {
     &PS
 }
 
-fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> String {
+fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> (String, bool) {
     let document = kuchikiki::parse_html().one(html);
 
     html::copy_media_and_add_dimensions(&document, page_dir);
-    html::syntax_highlight_code_blocks(&document);
+    let has_code_blocks = html::has_code_blocks(&document);
+    if has_code_blocks {
+        html::syntax_highlight_code_blocks(&document);
+    }
     html::update_references_section(&document);
 
-    html::finish(&document)
+    (html::finish(&document), has_code_blocks)
 }
 
 #[allow(dead_code)]
@@ -138,23 +141,25 @@ fn main() -> Result<()> {
                 fs::create_dir(WEBSITE_DIR.join(&slug)).unwrap();
             }
 
+            let mut post_context = front_page_info.to_map();
+
             // - re-formats the generated html
             // - copies images to each page's directory
             // - and more. see function
-            let html_contents = process_html(&html_contents, &page_dir);
+            let (html_contents, has_code_blocks) = process_html(&html_contents, &page_dir);
 
-            let mut post_context = front_page_info.to_map();
-            post_context.insert("contents", &html_contents);
+            post_context.insert("contents", html_contents.into());
+            post_context.insert("hascodeblock", has_code_blocks.into());
             post_context.extend(
                 front_matter
                     .all_else()
                     .iter()
-                    .map(|(k, v)| (k.as_ref(), v.as_ref())),
+                    .map(|(k, v)| (k.as_ref(), v.as_ref().into())),
             );
 
             // Render article page
             let rendered =
-                tera().render("page.html", &tera::Context::from_serialize(&post_context)?)?;
+                tera().render("page.html", &tera::Context::from_serialize(post_context)?)?;
 
             let output_path = page_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;

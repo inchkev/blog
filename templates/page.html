@@ -2,7 +2,7 @@
 {% block url %}/{{ slug }}{% endblock url %}
 {% block style %}
   <link rel="stylesheet" href="/style.css">
-  <link rel="stylesheet" href="/syntax.css">
+{% if hascodeblock %}  <link rel="stylesheet" href="/syntax.min.css">{% endif -%}
 {% endblock style %}
 {% block content -%}
       <header>

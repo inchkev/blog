@@ -69,11 +69,11 @@ impl FrontPageInfo {
         self.slug.as_ref()
     }
 
-    pub fn to_map(&self) -> HashMap<&str, &str> {
+    pub fn to_map(&self) -> HashMap<&str, serde_json::Value> {
         HashMap::from([
-            ("title", self.title.as_ref()),
-            ("date", self.date.as_ref()),
-            ("slug", self.slug.as_ref()),
+            ("title", serde_json::to_value(self.title.clone()).unwrap()),
+            ("date", serde_json::to_value(self.date.clone()).unwrap()),
+            ("slug", serde_json::to_value(self.slug.clone()).unwrap()),
         ])
     }
 }

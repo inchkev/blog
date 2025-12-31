@@ -57,6 +57,10 @@ pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(document: &NodeRef, move_di
     }
 }
 
+pub fn has_code_blocks(document: &NodeRef) -> bool {
+    document.select("pre code").unwrap().next().is_some()
+}
+
 pub fn syntax_highlight_code_blocks(document: &NodeRef) {
     for code_tag in document.select("pre code").unwrap() {
         let Some(class) = ({
