@@ -104,6 +104,7 @@ header p {
 p, h1, h2, h3, h4, h5, h6, table, ul, ol {
   margin-top: 0;
   margin-bottom: 0.6rem;
+  overflow-wrap: break-word;
 }
 p strong, p b {
   letter-spacing: -0.01rem;
@@ -112,6 +113,7 @@ h1, h2, h3, h4, h5, h6 {
   font-family: -apple-system, "system-ui", "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
   font-weight: normal;
   line-height: 26px;
+  text-wrap: balance;
 
   color: var(--green);
 
@@ -146,6 +148,9 @@ a {
   text-decoration-thickness: 1px;
   text-decoration-style: dotted;
   text-underline-offset: 0.2rem;
+  word-break: break-all;
+  overflow-wrap: break-word;
+
 }
 a:link, a:visited {
   color: var(--hyperlink);
