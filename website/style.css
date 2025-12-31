@@ -157,6 +157,7 @@ code a:hover, a:hover code,
 header a:hover, footer a:hover {
   color: var(--magenta);
   text-decoration-color: var(--magenta);
+  text-decoration-style: solid;
 }
 
 /* MEDIA */
