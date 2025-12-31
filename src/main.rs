@@ -1,11 +1,9 @@
-use std::{
-    cmp::Reverse,
-    collections::HashMap,
-    fs::{self, File},
-    io::Write,
-    path::{Path, PathBuf},
-    sync::LazyLock,
-};
+use std::cmp::Reverse;
+use std::collections::HashMap;
+use std::fs::{self, File};
+use std::io::Write;
+use std::path::{Path, PathBuf};
+use std::sync::LazyLock;
 
 use anyhow::Result;
 use gray_matter::ParsedEntity;
@@ -26,7 +24,8 @@ static WEBSITE_DIR: LazyLock<PathBuf> = LazyLock::new(|| "website".into());
 static STATE_FILE: LazyLock<PathBuf> = LazyLock::new(|| "state.json".into());
 
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
-    use gray_matter::{engine::YAML, Matter};
+    use gray_matter::engine::YAML;
+    use gray_matter::Matter;
     static MATTER: LazyLock<Matter<YAML>> = LazyLock::new(Matter::<YAML>::new);
     &MATTER
 }

@@ -1,12 +1,11 @@
-use std::{
-    boxed::Box,
-    collections::{HashMap, HashSet},
-    fs,
-    path::Path,
-};
+use std::boxed::Box;
+use std::collections::{HashMap, HashSet};
+use std::fs;
+use std::path::Path;
 
 use anyhow::Result;
-use base64::{engine::general_purpose, Engine as _};
+use base64::engine::general_purpose;
+use base64::Engine as _;
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 

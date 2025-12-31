@@ -1,11 +1,12 @@
-use std::{path::Path, sync::LazyLock};
+use std::path::Path;
+use std::sync::LazyLock;
 
 use anyhow::Result;
-use kuchikiki::{iter::Siblings, traits::TendrilSink, NodeRef};
-use syntect::{
-    html::{ClassStyle, ClassedHTMLGenerator},
-    util::LinesWithEndings,
-};
+use kuchikiki::iter::Siblings;
+use kuchikiki::traits::TendrilSink;
+use kuchikiki::NodeRef;
+use syntect::html::{ClassStyle, ClassedHTMLGenerator};
+use syntect::util::LinesWithEndings;
 
 use crate::CONTENT_DIR;
 

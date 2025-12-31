@@ -82,7 +82,12 @@ header, footer {
   }
 }
 
-/* HEADING */
+/* HEADER */
+header p {
+  margin-bottom: 0;
+}
+
+/* POST HEADING */
 .head {
   margin-bottom: 1rem;
 }
