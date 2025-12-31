@@ -67,13 +67,19 @@ header, footer, .posts, .article {
 }
 header, footer {
   background-color: var(--bg-main);
-  padding: 0.43rem 1.5rem 0.4rem 1.5rem;
+  padding: 0.43rem 1.5rem 0.4rem;
 }
 .posts {
   padding: 0.75rem 1.5rem;
 }
 .article {
   padding: 1.45rem 1.5rem 1.9rem;
+}
+@media (max-width: 480px) {
+  header, footer, .posts, .article {
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
 }
 
 /* HEADING */
