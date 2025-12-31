@@ -1,10 +1,12 @@
 use std::{
+    boxed::Box,
     collections::{HashMap, HashSet},
     fs,
     path::Path,
 };
 
 use anyhow::Result;
+use base64::{engine::general_purpose, Engine as _};
 use serde::{Deserialize, Serialize};
 use sha2::{Digest, Sha256};
 
@@ -51,8 +53,8 @@ impl StateManager {
         c != checksum
     }
 
-    pub fn add_or_keep(&mut self, slug: &str, checksum: &str) {
-        _ = self.changed.insert(slug.to_owned(), checksum.to_owned());
+    pub fn add_or_keep(&mut self, slug: String, checksum: String) {
+        _ = self.changed.insert(slug, checksum);
     }
 
     pub fn get_stale_slugs(&self) -> Vec<String> {
@@ -83,11 +85,17 @@ impl StateManager {
     }
 }
 
-pub fn calculate_sha256_hash(content: &str) -> String {
-    let hash = Sha256::digest(content);
-
-    // serialize as 64-length hex string
-    let mut hex_hash_buf = [0u8; 64];
-    let hex_hash = base16ct::lower::encode_str(&hash, &mut hex_hash_buf).unwrap();
-    hex_hash.to_string()
+pub fn calculate_sha256_hash(content: &str) -> Box<str> {
+    let hash_result = Sha256::digest(content);
+    // serialize as 44 length Base64 string
+    let mut buf = [0u8; 44];
+    let _ = general_purpose::STANDARD
+        .encode_slice(hash_result, &mut buf)
+        .unwrap();
+    // SAFETY: Base64 strings are always valid UTF-8
+    unsafe {
+        let boxed_bytes: Box<[u8]> = Box::from(buf);
+        let ptr = Box::into_raw(boxed_bytes) as *mut str;
+        Box::from_raw(ptr)
+    }
 }

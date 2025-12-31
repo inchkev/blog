@@ -10,6 +10,7 @@ use std::{
 use anyhow::Result;
 use gray_matter::ParsedEntity;
 use kuchikiki::traits::TendrilSink;
+use markdown::{CompileOptions, ParseOptions};
 use walkdir::WalkDir;
 
 mod html;
@@ -39,13 +40,6 @@ fn tera() -> &'static tera::Tera {
     &TERA
 }
 
-pub fn ss() -> &'static syntect::parsing::SyntaxSet {
-    static PS: LazyLock<syntect::parsing::SyntaxSet> =
-        LazyLock::new(syntect::parsing::SyntaxSet::load_defaults_newlines);
-    &PS
-}
-
-#[allow(dead_code)]
 fn ts() -> &'static syntect::highlighting::ThemeSet {
     static PS: LazyLock<syntect::highlighting::ThemeSet> =
         LazyLock::new(|| syntect::highlighting::ThemeSet::load_from_folder(&*THEME_DIR).unwrap());
@@ -57,10 +51,9 @@ fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> String {
 
     html::copy_media_and_add_dimensions(&document, page_dir);
     html::syntax_highlight_code_blocks(&document);
+    html::update_references_section(&document);
 
-    html::get_body_children_of_document(&document)
-        .map(|nr| nr.to_string())
-        .collect()
+    html::finish(&document)
 }
 
 #[allow(dead_code)]
@@ -85,8 +78,17 @@ fn get_slug_from_path<P: AsRef<Path>>(path: P) -> String {
 
 fn main() -> Result<()> {
     let mut posts = Vec::<FrontPageInfo>::new();
-
     let mut state = StateManager::from_state_file(&*STATE_FILE).unwrap_or_default();
+    let markdown_options = markdown::Options {
+        parse: ParseOptions::gfm(),
+        compile: CompileOptions {
+            allow_dangerous_html: true,
+            allow_dangerous_protocol: true,
+            gfm_footnote_label: Some("References".into()),
+            gfm_footnote_back_label: Some("Jump up".into()),
+            ..CompileOptions::gfm()
+        },
+    };
 
     // Walk files from newest to oldest creation time
     for entry in WalkDir::new(&*CONTENT_DIR)
@@ -96,16 +98,18 @@ fn main() -> Result<()> {
     {
         let path = entry.into_path();
         if path.is_file() && path.extension().is_some_and(|s| s == "md") {
-            print!("Reading {} ...", path.as_os_str().to_string_lossy());
+            print!("READ {} ... ", path.as_os_str().to_string_lossy());
             std::io::stdout().flush()?;
 
             let file_contents = fs::read_to_string(&path)?;
             let parsed_file: ParsedEntity = yaml_matter().parse(&file_contents)?;
             let Some(front_matter_data) = parsed_file.data else {
+                println!("skipped (no data)");
                 continue;
             };
             let front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
             if front_matter.draft() {
+                println!("skipped (draft)");
                 continue;
             }
 
@@ -119,24 +123,16 @@ fn main() -> Result<()> {
             // Skip if contents haven't changed
             let file_checksum = calculate_sha256_hash(&file_contents);
             if !state.contents_changed(&slug, &file_checksum) {
-                state.add_or_keep(&slug, &file_checksum);
+                state.add_or_keep(slug, file_checksum.to_string());
                 posts.push(front_page_info);
-                println!(" done (no changes)");
+                println!("skipped (no changes)");
                 continue;
             }
 
-            let options = markdown::Options {
-                parse: markdown::ParseOptions::gfm(),
-                compile: markdown::CompileOptions {
-                    allow_dangerous_html: true,
-                    allow_dangerous_protocol: true,
-                    ..markdown::CompileOptions::gfm()
-                },
-            };
             let html_contents =
-                markdown::to_html_with_options(&parsed_file.content, &options).unwrap();
+                markdown::to_html_with_options(&parsed_file.content, &markdown_options).unwrap();
 
-            // create directory for page
+            // Create directory for page
             let page_dir = WEBSITE_DIR.join(&slug);
             if page_dir.try_exists().is_ok_and(|exists| !exists) {
                 fs::create_dir(WEBSITE_DIR.join(&slug)).unwrap();
@@ -144,6 +140,7 @@ fn main() -> Result<()> {
 
             // - re-formats the generated html
             // - copies images to each page's directory
+            // - and more. see function
             let html_contents = process_html(&html_contents, &page_dir);
 
             let mut post_context = front_page_info.to_map();
@@ -160,12 +157,13 @@ fn main() -> Result<()> {
                 tera().render("page.html", &tera::Context::from_serialize(&post_context)?)?;
 
             let output_path = page_dir.join("index.html");
-            let mut output_file = File::create(output_path)?;
+            let mut output_file = File::create(&output_path)?;
             output_file.write_all(rendered.as_bytes())?;
 
-            state.add_or_keep(&slug, &file_checksum);
-            println!(" done");
+            println!("generated");
+            println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
 
+            state.add_or_keep(slug, file_checksum.to_string());
             posts.push(front_page_info);
         }
     }
@@ -188,7 +186,7 @@ fn main() -> Result<()> {
     let mut index_file = File::create(&index_path)?;
     index_file.write_all(rendered.as_bytes())?;
 
-    println!("Writing {}", index_path.as_os_str().to_string_lossy());
+    println!("WRITE {}", index_path.as_os_str().to_string_lossy());
 
     // load_syntax_theme("gruvbox (Light) (Hard)")?;
 

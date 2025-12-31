@@ -1,4 +1,4 @@
-use std::path::Path;
+use std::{path::Path, sync::LazyLock};
 
 use anyhow::Result;
 use kuchikiki::{iter::Siblings, traits::TendrilSink, NodeRef};
@@ -7,17 +7,30 @@ use syntect::{
     util::LinesWithEndings,
 };
 
-use crate::{ss, CONTENT_DIR};
+use crate::CONTENT_DIR;
 
 pub const SYNTECT_CLASSSTYLE: ClassStyle = ClassStyle::SpacedPrefixed { prefix: "_" };
+
+#[must_use]
+pub fn ss() -> &'static syntect::parsing::SyntaxSet {
+    static PS: LazyLock<syntect::parsing::SyntaxSet> =
+        LazyLock::new(syntect::parsing::SyntaxSet::load_defaults_newlines);
+    &PS
+}
 
 fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
     let size = imagesize::size(path)?;
     Ok(size)
 }
 
-pub fn get_body_children_of_document(document: &NodeRef) -> Siblings {
+fn get_body_children_of_document(document: &NodeRef) -> Siblings {
     document.select_first("body").unwrap().as_node().children()
+}
+
+pub fn finish(document: &NodeRef) -> String {
+    get_body_children_of_document(document)
+        .map(|nr| nr.to_string())
+        .collect()
 }
 
 pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(document: &NodeRef, move_dir: P) {
@@ -84,6 +97,51 @@ pub fn syntax_highlight_code_blocks(document: &NodeRef) {
         }
         for code_node in get_body_children_of_document(&code_document) {
             node.insert_after(code_node);
+        }
+    }
+}
+
+pub fn update_references_section(document: &NodeRef) {
+    for backref in document.select("a[data-footnote-backref]").unwrap() {
+        let backref_node = backref.as_node();
+
+        let backref_symbol_node = backref_node.first_child().unwrap();
+        let mut backref_symbol_text = backref_symbol_node.as_text().unwrap().borrow_mut();
+        *backref_symbol_text = backref_symbol_text.replace('\u{21A9}', "^");
+        // NOTE: If you'd like to keep U+21A9, read the following:
+        // Add the U+FE0F "text varation selector" character after
+        // the backref symbol (U+21A9 leftwards arrow with hook)
+
+        // Move backref to the beginning of the paragraph
+        let Some(parent) = backref_node.parent() else {
+            continue;
+        };
+
+        // Make sure parent is a <p> tag
+        if parent.as_element().map(|e| e.name.local.as_ref()) != Some("p") {
+            continue;
+        }
+
+        // Remove trailing space before backref if it exists
+        if let Some(prev_sibling) = backref_node.previous_sibling() {
+            if let Some(prev_text) = prev_sibling.as_text() {
+                let mut prev_text = prev_text.borrow_mut();
+                if prev_text.ends_with(' ') {
+                    *prev_text = prev_text.trim_end().into();
+                }
+            }
+        }
+
+        // Move backref node to the beginning of the <p> tag
+        backref_node.detach();
+        if parent.first_child().is_some() {
+            parent.prepend(backref_node.clone());
+            // Add a space after the backref
+            let space_node = NodeRef::new_text(" ");
+            backref_node.insert_after(space_node);
+        } else {
+            // If paragraph is somehow empty, just append
+            parent.append(backref_node.clone());
         }
     }
 }

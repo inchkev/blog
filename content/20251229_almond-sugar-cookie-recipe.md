@@ -8,7 +8,7 @@ These cookies have the form factor and tender center of a classic American sugar
 
 I came up with this over the holidays when my sister first requested I make sugar cookies, then later (unrelated) we shared a frangipane tart from Whole Foods, to which she said she loved almond-flavored desserts, something I never knew about her. I had already bought turbinado sugar to coat sugar cookies with but now I really wanted to make Italian pignoli or ricciarelli cookies. I ended up making neither.
 
-I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for almond sugar cookies (which they adapted from All Recipes). [^1] I used some ingredient additions and ratios (less butter, addition of egg white instead of yolk) from Vaughn Vreeland’s NYT recipe for rum-buttered almond cookies. [^2] Finally, I reduced the sugar to suit my palate (see notes) following a recipe for Chinese almond cookies. [^3]
+I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for almond sugar cookies (which they adapted from All Recipes).[^1] I used some ingredient additions and ratios (less butter, addition of egg white instead of yolk) from Vaughn Vreeland’s NYT recipe for rum-buttered almond cookies.[^2] Finally, I reduced the sugar to suit my palate (see notes) following a recipe for Chinese almond cookies.[^3]
 
 ## Ingredients
 
@@ -41,10 +41,10 @@ Store cookies in an loosely sealed tin/container with a paper towel at room temp
 ![](IMG_7762.jpg)
 ## Notes
 
-- If you prefer your cookies closer in sweetness to a standard sugar cookie, add an additional ¼ to ½ cup sugar (this will change the baking time - you’re on your own).
+- If you prefer your cookies closer in sweetness to a standard sugar cookie, add an additional ¼ to ½ cup sugar (this will change the baking time so you’re on your own).
 - If you’re using Morton’s kosher salt, reduce to ½ tsp instead of 1 tsp.
 - You can use a hand whisk instead of an electric mixer; creaming butter manually isn’t that bad.
-- A #20 cookie scoop is what my parents had in their kitchen so these cookies turned out rather large. If you used a smaller scoop like a #30 (~2 tablespoons), they’d bake faster and you could probably get 25+ cookies. But then they’d also take up three trays.
+- A #20 cookie scoop is what my parents had in their kitchen so these cookies turned out rather large. If you used a smaller scoop like a #30 (~2 tablespoons), they’d bake faster and you would probably get 25+ cookies. They would also take up three trays.
 
 [^1]: https://www.reddit.com/r/Baking/comments/15ruwxm/comment/jwap2a8/ [Archived](https://archive.ph/rRXEu)
 [^2]: https://cooking.nytimes.com/recipes/1026334-rum-buttered-almond-cookies [Archived](https://archive.ph/f3515)
