@@ -4,7 +4,7 @@ title: Almond sugar cookies
 ---
 Happy 2025! Haha.
 
-These cookies have the form factor and tender center of a classic American sugar cookie combined with the crispy edge, mild sweetness and slightly-salty almond flavor of a Chinese almond cookie.o
+These cookies have the form factor and tender center of a classic American sugar cookie combined with the crispy edge, mild sweetness and slightly-salty almond flavor of a Chinese almond cookie.
 
 I came up with this over the holidays when my sister first requested I make sugar cookies, then later (unrelated) we shared a frangipane tart from Whole Foods, to which she said she loved almond-flavored desserts, something I never knew about her. I had already bought turbinado sugar to coat sugar cookies with but now I really wanted to make Italian pignoli or ricciarelli cookies. I ended up making neither.
 
