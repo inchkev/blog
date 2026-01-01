@@ -2,13 +2,14 @@
 title: Almond sugar cookies
 date: 2025-12-29
 ---
+
 Happy 2025! Haha.
 
 These cookies have the form factor and tender center of a classic American sugar cookie combined with the crispy edge, mild sweetness and slightly-salty almond flavor of a Chinese almond cookie.
 
 I came up with this over the holidays when my sister first requested I make sugar cookies, then later (unrelated) we shared a frangipane tart from Whole Foods, to which she said she loved almond-flavored desserts, something I never knew about her. I had already bought turbinado sugar to coat sugar cookies with but now I really wanted to make Italian pignoli or ricciarelli cookies. I ended up making neither.
 
-I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for almond sugar cookies (which they adapted from All Recipes).[^1] I used some ingredient additions and ratios (less butter, addition of egg white instead of yolk) from Vaughn Vreeland’s NYT recipe for rum-buttered almond cookies.[^2] Finally, I reduced the sugar to suit my palate (see notes) following a recipe for Chinese almond cookies.[^3]
+I adapted this recipe primarily from Redditor _CatfromLongIsland_’s recipe for almond sugar cookies (which they adapted from All Recipes).[^1] I used some ingredient additions and ratios (less butter, addition of egg white instead of yolk) from Vaughn Vreeland’s NYT recipe for rum-buttered almond cookies.[^2] Finally, I reduced the sugar to suit my palate (see notes) following a recipe for Chinese almond cookies.[^3]
 
 ## Ingredients
 
@@ -39,6 +40,7 @@ I adapted this recipe primarily from Redditor *CatfromLongIsland*’s recipe for
 Store cookies in an loosely sealed tin/container at room temp with a paper towel. If you store them in an airtight container, the edges will lose their crispiness. They’ll probably last up to a week, but I haven’t been able to test this.
 
 ![](IMG_7762.jpg)
+
 ## Notes
 
 - If you prefer your cookies closer in sweetness to a standard sugar cookie, add an additional ¼ to ½ cup sugar (this will change the baking time so you’re on your own).

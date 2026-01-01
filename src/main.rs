@@ -6,15 +6,15 @@ use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
 use anyhow::Result;
+use glob::glob;
 use gray_matter::ParsedEntity;
 use kuchikiki::traits::TendrilSink;
 use markdown::{CompileOptions, ParseOptions};
-use walkdir::WalkDir;
 
 mod html;
 mod state;
 mod types;
-use state::{calculate_sha256_hash, StateManager};
+use state::{calculate_checksum_globs, calculate_checksum_str, StateManager};
 use types::{FrontPageInfo, PageFrontMatter};
 
 static CONTENT_DIR: LazyLock<PathBuf> = LazyLock::new(|| "content".into());
@@ -22,6 +22,9 @@ static TEMPLATE_DIR: LazyLock<PathBuf> = LazyLock::new(|| "templates".into());
 static THEME_DIR: LazyLock<PathBuf> = LazyLock::new(|| "themes".into());
 static WEBSITE_DIR: LazyLock<PathBuf> = LazyLock::new(|| "website".into());
 static STATE_FILE: LazyLock<PathBuf> = LazyLock::new(|| "state.json".into());
+
+/// File patterns that trigger a full site rebuild when any matching file changes.
+static FORCE_REBUILD_PATTERNS: &[&str] = &["templates/*.html", "src/*.rs"];
 
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
     use gray_matter::engine::YAML;
@@ -82,7 +85,15 @@ fn try_get_slug_from_path<P: AsRef<Path>>(path: P) -> Option<String> {
 
 fn main() -> Result<()> {
     let mut posts = Vec::<FrontPageInfo>::new();
-    let mut state = StateManager::from_state_file(&*STATE_FILE).unwrap_or_default();
+    let mut state = StateManager::from_path(&*STATE_FILE)?;
+
+    // Check if force-rebuild files changed (triggers full regeneration)
+    let force_rebuild_checksum = calculate_checksum_globs(FORCE_REBUILD_PATTERNS);
+    let force_regenerate = state.set_force_rebuild_checksum(force_rebuild_checksum.into());
+    if force_regenerate {
+        println!("Force-rebuild files changed, regenerating all pages...");
+    }
+
     let markdown_options = markdown::Options {
         parse: ParseOptions::gfm(),
         compile: CompileOptions {
@@ -94,94 +105,92 @@ fn main() -> Result<()> {
         },
     };
 
-    // Walk files from newest to oldest creation time
-    for entry in WalkDir::new(&*CONTENT_DIR)
-        .max_depth(1)
-        .sort_by_key(|entry| Reverse(entry.metadata().ok().and_then(|m| m.created().ok())))
+    // Collect markdown files and sort by creation time (newest first)
+    let mut content_paths: Vec<_> = glob(&format!("{}/*.md", CONTENT_DIR.display()))
         .into_iter()
+        .flatten()
         .filter_map(std::result::Result::ok)
-    {
-        let path = entry.into_path();
-        if path.is_file() && path.extension().is_some_and(|s| s == "md") {
-            print!("READ {} ... ", path.as_os_str().to_string_lossy());
-            std::io::stdout().flush()?;
+        .collect();
+    content_paths.sort_by_key(|p| Reverse(p.metadata().ok().and_then(|m| m.created().ok())));
 
-            let file_contents = fs::read_to_string(&path)?;
-            let parsed_file: ParsedEntity = yaml_matter().parse(&file_contents)?;
-            let Some(front_matter_data) = parsed_file.data else {
-                println!("skipped (no data)");
+    for path in content_paths {
+        // print!("READ {} ... ", path.as_os_str().to_string_lossy());
+        std::io::stdout().flush()?;
+
+        let file_contents = fs::read_to_string(&path)?;
+        let parsed_file: ParsedEntity = yaml_matter().parse(&file_contents)?;
+        let Some(front_matter_data) = parsed_file.data else {
+            // println!("skipped (no data)");
+            continue;
+        };
+        let front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
+        if front_matter.draft() {
+            // println!("skipped (draft)");
+            continue;
+        }
+
+        let slug = if let Some(s) = front_matter.slug() {
+            s.to_string()
+        } else {
+            let Some(s) = try_get_slug_from_path(&path) else {
+                // println!("skipped (no slug)");
                 continue;
             };
-            let front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
-            if front_matter.draft() {
-                println!("skipped (draft)");
-                continue;
-            }
+            s
+        };
 
-            let slug = if let Some(s) = front_matter.slug() {
-                s.to_string()
-            } else {
-                let Some(s) = try_get_slug_from_path(&path) else {
-                    println!("skipped (no slug)");
-                    continue;
-                };
-                s
-            };
+        let front_page_info = FrontPageInfo::new(
+            front_matter.title().unwrap_or(&slug),
+            front_matter.date(),
+            slug.clone(),
+        );
 
-            let front_page_info = FrontPageInfo::new(
-                front_matter.title().unwrap_or(&slug),
-                front_matter.date(),
-                slug.clone(),
-            );
-
-            // Skip if contents haven't changed
-            let file_checksum = calculate_sha256_hash(&file_contents);
-            if !state.contents_changed(&slug, &file_checksum) {
-                state.add_or_keep(slug, file_checksum.to_string());
-                posts.push(front_page_info);
-                println!("skipped (no changes)");
-                continue;
-            }
-
-            let html_contents =
-                markdown::to_html_with_options(&parsed_file.content, &markdown_options).unwrap();
-
-            // Create directory for page
-            let page_dir = WEBSITE_DIR.join(&slug);
-            if page_dir.try_exists().is_ok_and(|exists| !exists) {
-                fs::create_dir(WEBSITE_DIR.join(&slug)).unwrap();
-            }
-
-            let mut post_context = front_page_info.to_map();
-
-            // - re-formats the generated html
-            // - copies images to each page's directory
-            // - and more. see function
-            let (html_contents, has_code_blocks) = process_html(&html_contents, &page_dir);
-
-            post_context.insert("contents", html_contents.into());
-            post_context.insert("hascodeblock", has_code_blocks.into());
-            post_context.extend(
-                front_matter
-                    .all_else()
-                    .iter()
-                    .map(|(k, v)| (k.as_ref(), v.as_ref().into())),
-            );
-
-            // Render article page
-            let rendered =
-                tera().render("page.html", &tera::Context::from_serialize(post_context)?)?;
-
-            let output_path = page_dir.join("index.html");
-            let mut output_file = File::create(&output_path)?;
-            output_file.write_all(rendered.as_bytes())?;
-
-            println!("generated");
-            println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
-
+        // Skip if contents haven't changed (unless force regenerating)
+        let file_checksum = calculate_checksum_str(&file_contents);
+        if !force_regenerate && !state.contents_changed(&slug, &file_checksum) {
             state.add_or_keep(slug, file_checksum.to_string());
             posts.push(front_page_info);
+            // println!("skipped (no changes)");
+            continue;
         }
+
+        let html_contents =
+            markdown::to_html_with_options(&parsed_file.content, &markdown_options).unwrap();
+
+        // Create directory for page
+        let page_dir = WEBSITE_DIR.join(&slug);
+        if page_dir.try_exists().is_ok_and(|exists| !exists) {
+            fs::create_dir(WEBSITE_DIR.join(&slug)).unwrap();
+        }
+
+        let mut post_context = front_page_info.to_map();
+
+        // - re-formats the generated html
+        // - copies images to each page's directory
+        // - and more. see function
+        let (html_contents, has_code_blocks) = process_html(&html_contents, &page_dir);
+
+        post_context.insert("contents", html_contents.into());
+        post_context.insert("hascodeblock", has_code_blocks.into());
+        post_context.extend(
+            front_matter
+                .all_else()
+                .iter()
+                .map(|(k, v)| (k.as_ref(), v.as_ref().into())),
+        );
+
+        // Render article page
+        let rendered = tera().render("page.html", &tera::Context::from_serialize(post_context)?)?;
+
+        let output_path = page_dir.join("index.html");
+        let mut output_file = File::create(&output_path)?;
+        output_file.write_all(rendered.as_bytes())?;
+
+        // println!("generated");
+        println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
+
+        state.add_or_keep(slug, file_checksum.to_string());
+        posts.push(front_page_info);
     }
 
     // Delete stale files
