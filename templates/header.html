@@ -1,4 +1,5 @@
-{%- set base__name = "blog.kevin.garden" -%}
+{%- set base__name = "p.kevin.garden" -%}
+{%- set display__name = "p.k.g" -%}
 <!DOCTYPE html>
 
 <html lang="en" prefix="og: https://ogp.me/ns#">
@@ -7,14 +8,14 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1.0">
 
-  <title>{% if title %}{{ title }} - {% endif %}{{ base__name }}</title>
+  <title>{% if title %}{{ title }} - {% endif %}{{ display__name }}</title>
   <link rel="icon" type="image/svg" href="/favicon.svg">
 
   <meta name="description" content="Kevin's blog">
   <meta name="author" content="Kevin Chen">
-  <meta property="og:title" content="{% if title %}{{ title }} - {% endif %}{{ base__name }}">
+  <meta property="og:title" content="{% if title %}{{ title }} - {% endif %}{{ display__name }}">
   <meta property="og:type" content="website">
-  <meta property="og:url" content="https://blog.kevin.garden{% block url %}{% endblock url %}">
+  <meta property="og:url" content="https://{{ base__name }}{% block url %}{% endblock url %}">
   <meta property="og:image" content="">
   <meta name="twitter:card" content="summary_large_image">
   <meta name="twitter:creator" content="@inchkev">

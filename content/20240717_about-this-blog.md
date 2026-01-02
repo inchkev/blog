@@ -1,6 +1,6 @@
 ---
 date: 2024-07-17
-title: About this blog
+title: About this "blog"
 updated: 2026-01-02
 ---
 
@@ -8,7 +8,7 @@ I will really do anything but write. Two months ago I wanted to start a blog to 
 
 ## License
 
-All images published here (blog.kevin.garden/\*) are licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
+All images, unless otherwise specified, are licensed under [CC BY-SA 4.0](https://creativecommons.org/licenses/by-sa/4.0/).
 
 ## Colophon
 
