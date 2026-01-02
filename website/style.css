@@ -60,14 +60,14 @@ body {
   max-width: 45rem;
   padding: 0.5em;
   border: 2px dotted var(--green);
-  border-radius: 1.5rem;
+  border-radius: 1.4rem;
 }
 header, footer, .posts, .article {
   background-color: var(--bg-main);
 }
 header, footer {
   background-color: var(--bg-main);
-  padding: 0.43rem 1.5rem 0.4rem;
+  padding: 0.41rem 1.5rem 0.39rem;
 }
 .posts {
   padding: 0.75rem 1.5rem;
@@ -180,7 +180,7 @@ img, video {
 /* CODE BLOCKS, QUOTES, ASIDES */
 pre, blockquote, aside {
   border: 1px dotted var(--border-accent);
-  border-radius: 0.2rem;
+  border-radius: 0.25rem;
   background-color: var(--bg-accent);
   margin: 0;
   margin-top: 0.1rem;

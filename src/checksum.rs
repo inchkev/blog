@@ -1,10 +1,11 @@
 use std::fmt;
 use std::fs;
-use std::time::Instant;
+use std::path::PathBuf;
 
 use base64::engine::general_purpose;
 use base64::Engine as _;
 use glob::glob;
+use rayon::prelude::*;
 use serde::{Deserialize, Deserializer, Serialize, Serializer};
 use sha2::{Digest, Sha256};
 
@@ -34,20 +35,18 @@ impl Checksum {
     }
 
     /// Generate a single [`Checksum`] for paths from `patterns`.
+    #[allow(dead_code)]
     pub fn from_globs<S: AsRef<str> + Ord>(patterns: &[S]) -> Self {
         let mut hasher = Sha256::new();
 
         let mut sorted_patterns: Vec<_> = patterns.iter().collect();
         sorted_patterns.sort();
 
-        let start = Instant::now();
         for pattern in sorted_patterns {
-            // TODO: Consider streaming io to reduce memory usage
             let mut paths: Vec<_> = glob(pattern.as_ref())
                 .into_iter()
                 .flatten()
-                .filter_map(std::result::Result::ok)
-                .filter(|p| p.is_file())
+                .filter_map(|p| p.ok().filter(|p| p.is_file()))
                 .collect();
             paths.sort();
 
@@ -59,9 +58,42 @@ impl Checksum {
         }
 
         let hash = hasher.finalize();
-        println!("Checksum::from_globs took {:?}", start.elapsed());
-
         Self::from_sha256(&hash)
+    }
+
+    /// Generate a single [`Checksum`] for paths from `patterns`.
+    ///
+    /// Hashes files in parallel.
+    pub fn from_globs_par<S: AsRef<str> + Ord + Sync>(patterns: &[S]) -> Self {
+        let mut sorted_patterns: Vec<_> = patterns.iter().collect();
+        sorted_patterns.sort();
+
+        // Get file paths
+        let mut all_paths: Vec<PathBuf> = Vec::new();
+        for pattern in sorted_patterns {
+            let mut paths: Vec<_> = glob(pattern.as_ref())
+                .into_iter()
+                .flatten()
+                .filter_map(|p| p.ok().filter(|p| p.is_file()))
+                .collect();
+            paths.sort();
+            all_paths.extend(paths);
+        }
+
+        // Hash files in parallel, then hash the combined hashes
+        let mut final_hasher = Sha256::new();
+        all_paths
+            .par_iter()
+            .filter_map(|path| {
+                fs::read(path)
+                    .ok()
+                    .map(|contents| Sha256::digest(&contents))
+            })
+            .collect::<Vec<_>>()
+            .into_iter()
+            .for_each(|hash| final_hasher.update(hash));
+
+        Self::from_sha256(&final_hasher.finalize())
     }
 
     /// Returns the checksum as a string slice.
@@ -110,5 +142,54 @@ impl<'de> Deserialize<'de> for Checksum {
         let mut buf = [0u8; BASE64_SHA256_LEN];
         buf.copy_from_slice(bytes);
         Ok(Self(buf))
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::time::Instant;
+
+    use super::*;
+
+    #[test]
+    fn bench_from_globs() {
+        let patterns = ["src/*", "content/*", "templates/*"];
+        let iterations = 1_000;
+
+        // Warmup
+        for _ in 0..10 {
+            std::hint::black_box(Checksum::from_globs(&patterns));
+        }
+
+        let start = Instant::now();
+        for _ in 0..iterations {
+            std::hint::black_box(Checksum::from_globs(&patterns));
+        }
+        let elapsed = start.elapsed();
+        println!(
+            "\nfrom_globs: {iterations} iterations took {elapsed:?} ({:?}/iter)",
+            elapsed / iterations
+        );
+    }
+
+    #[test]
+    fn bench_from_globs_par() {
+        let patterns = ["src/*", "content/*", "templates/*"];
+        let iterations = 1_000;
+
+        // Warmup
+        for _ in 0..10 {
+            std::hint::black_box(Checksum::from_globs_par(&patterns));
+        }
+
+        let start = Instant::now();
+        for _ in 0..iterations {
+            std::hint::black_box(Checksum::from_globs_par(&patterns));
+        }
+        let elapsed = start.elapsed();
+        println!(
+            "\nfrom_globs_parallel: {iterations} iterations took {elapsed:?} ({:?}/iter)",
+            elapsed / iterations
+        );
     }
 }

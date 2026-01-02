@@ -4,6 +4,7 @@ use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
+use std::time::Instant;
 
 use anyhow::Result;
 use glob::glob;
@@ -28,6 +29,10 @@ static STATE_FILE: LazyLock<PathBuf> = LazyLock::new(|| "state.json".into());
 /// File patterns that trigger a full site rebuild when any matching file changes.
 static FULL_REBUILD_GLOBS: &[&str] = &["templates/*.html", "src/*.rs"];
 
+// todos:
+// - parallelize article processing
+// - bufwriter?
+
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
     use gray_matter::engine::YAML;
     use gray_matter::Matter;
@@ -37,7 +42,8 @@ fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
 
 fn tera() -> &'static tera::Tera {
     static TERA: LazyLock<tera::Tera> = LazyLock::new(|| {
-        let mut tera = tera::Tera::new(&TEMPLATE_DIR.join("*.html").to_string_lossy()).unwrap();
+        let mut tera = tera::Tera::new(&TEMPLATE_DIR.join("*.html").to_string_lossy())
+            .unwrap_or_else(|e| panic!("{e}"));
         tera.autoescape_on(vec![]);
         tera
     });
@@ -45,22 +51,24 @@ fn tera() -> &'static tera::Tera {
 }
 
 fn ts() -> &'static syntect::highlighting::ThemeSet {
-    static PS: LazyLock<syntect::highlighting::ThemeSet> =
-        LazyLock::new(|| syntect::highlighting::ThemeSet::load_from_folder(&*THEME_DIR).unwrap());
+    static PS: LazyLock<syntect::highlighting::ThemeSet> = LazyLock::new(|| {
+        syntect::highlighting::ThemeSet::load_from_folder(&*THEME_DIR)
+            .unwrap_or_else(|e| panic!("{e}"))
+    });
     &PS
 }
 
-fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> (String, bool) {
+fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> Result<(String, bool)> {
     let document = kuchikiki::parse_html().one(html);
 
-    html::copy_media_and_add_dimensions(&document, page_dir);
+    html::copy_media_and_add_dimensions(&document, page_dir)?;
     let has_code_blocks = html::has_code_blocks(&document);
     if has_code_blocks {
         html::syntax_highlight_code_blocks(&document);
     }
     html::update_references_section(&document);
 
-    (html::finish(&document), has_code_blocks)
+    Ok((html::finish(&document), has_code_blocks))
 }
 
 #[allow(dead_code)]
@@ -86,11 +94,13 @@ fn try_get_slug_from_path<P: AsRef<Path>>(path: P) -> Option<String> {
 }
 
 fn main() -> Result<()> {
+    let start = Instant::now();
+
     let mut posts = Vec::<FrontPageInfo>::new();
     let mut state = StateManager::from_path(&*STATE_FILE)?;
 
-    // Set full-rebuild checksum (templates, source code, etc.)
-    let full_rebuild_checksum = Checksum::from_globs(FULL_REBUILD_GLOBS);
+    // Get checksum for files that can trigger a full rebuild
+    let full_rebuild_checksum = Checksum::from_globs_par(FULL_REBUILD_GLOBS);
     if state.set_full_rebuild_checksum(full_rebuild_checksum) {
         println!("Full-rebuild files changed, regenerating all pages...");
     }
@@ -116,7 +126,7 @@ fn main() -> Result<()> {
 
     for path in content_paths {
         // print!("READ {} ... ", path.as_os_str().to_string_lossy());
-        std::io::stdout().flush()?;
+        // stdout().flush()?;
 
         let file_contents = fs::read_to_string(&path)?;
         let parsed_file: ParsedEntity = yaml_matter().parse(&file_contents)?;
@@ -161,7 +171,7 @@ fn main() -> Result<()> {
 
         // Create directory for page
         let page_dir = WEBSITE_DIR.join(&slug);
-        if page_dir.try_exists().is_ok_and(|exists| !exists) {
+        if let Ok(false) = page_dir.try_exists() {
             fs::create_dir(WEBSITE_DIR.join(&slug)).unwrap();
         }
 
@@ -170,7 +180,7 @@ fn main() -> Result<()> {
         // - re-formats the generated html
         // - copies images to each page's directory
         // - and more. see function
-        let (html_contents, has_code_blocks) = process_html(&html_contents, &page_dir);
+        let (html_contents, has_code_blocks) = process_html(&html_contents, &page_dir)?;
 
         post_context.insert("contents", html_contents.into());
         post_context.insert("hascodeblock", has_code_blocks.into());
@@ -196,25 +206,34 @@ fn main() -> Result<()> {
 
     // Delete stale files
     for slug in &state.get_slugs_to_delete() {
-        fs::remove_dir_all(WEBSITE_DIR.join(slug)).unwrap();
+        fs::remove_dir_all(WEBSITE_DIR.join(slug))?;
     }
-    // Save new state file
-    state.write_state_file_and_commit()?;
 
-    // Render home page.
     // Sort posts in reverse "date" field order (should be mostly sorted already,
     // since we've walked the directory in reverse file creation date.
     posts.sort_by(|a, b| b.date().cmp(a.date()));
-    let index_context = HashMap::from([("posts", &posts)]);
-    let rendered = tera().render("index.html", &tera::Context::from_serialize(index_context)?)?;
 
-    let index_path = WEBSITE_DIR.join("index.html");
-    let mut index_file = File::create(&index_path)?;
-    index_file.write_all(rendered.as_bytes())?;
+    // Build home page (index).
+    let index_checksum = Checksum::from_data(&serde_json::to_string(&posts)?);
+    state.set_index_checksum(index_checksum);
+    if state.should_rebuild_index() {
+        let index_context = HashMap::from([("posts", &posts)]);
+        let rendered =
+            tera().render("index.html", &tera::Context::from_serialize(index_context)?)?;
 
-    println!("WRITE {}", index_path.as_os_str().to_string_lossy());
+        let index_path = WEBSITE_DIR.join("index.html");
+        let mut index_file = File::create(&index_path)?;
+        index_file.write_all(rendered.as_bytes())?;
+
+        println!("WRITE {}", index_path.as_os_str().to_string_lossy());
+    }
+
+    // Save new state file
+    state.write_state_file_and_commit()?;
 
     // load_syntax_theme("gruvbox (Light) (Hard)")?;
+
+    println!("Done in {:.2?}", start.elapsed());
 
     Ok(())
 }

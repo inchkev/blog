@@ -34,7 +34,10 @@ pub fn finish(document: &NodeRef) -> String {
         .collect()
 }
 
-pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(document: &NodeRef, move_dir: P) {
+pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(
+    document: &NodeRef,
+    move_dir: P,
+) -> Result<()> {
     for img_tag in document.select("img").unwrap() {
         let img_src = {
             let attributes = img_tag.attributes.borrow();
@@ -44,7 +47,7 @@ pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(document: &NodeRef, move_di
         let img_path = CONTENT_DIR.join(&img_src);
         let img_dest = move_dir.as_ref().join(&img_src);
 
-        std::fs::copy(img_path, img_dest).unwrap();
+        std::fs::copy(img_path, img_dest)?;
 
         let mut attributes_mut = img_tag.attributes.borrow_mut();
         // attributes_mut.insert("srcset", img_src.to_owned());
@@ -56,6 +59,7 @@ pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(document: &NodeRef, move_di
             attributes_mut.insert("height", img_dims.height.to_string());
         }
     }
+    Ok(())
 }
 
 pub fn has_code_blocks(document: &NodeRef) -> bool {

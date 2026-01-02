@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+rayon = "1.10"
 markdown = "1.0.0"
 anyhow = "1.0"
 serde = { version = "1.0.202", features = ["derive"] }
