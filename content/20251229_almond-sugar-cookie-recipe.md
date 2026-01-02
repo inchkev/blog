@@ -41,10 +41,6 @@ Store cookies in an loosely sealed tin/container at room temp with a paper towel
 
 ![16 delicious almond sugar cookies, on a wire rack, on a granite countertop](IMG_7762.jpg "Sorry for the bad lighting")
 
-Store cookies in an loosely sealed tin/container at room temp with a paper towel. If you store them in an airtight container, the edges will lose their crispiness. They’ll probably last up to a week, but I haven’t been able to test this.
-Store cookies in an loosely sealed tin/container at room temp with a paper towel. If you store them in an airtight container, the edges will lose their crispiness. They’ll probably last up to a week, but I haven’t been able to test this.
-Store cookies in an loosely sealed tin/container at room temp with a paper towel. If you store them in an airtight container, the edges will lose their crispiness. They’ll probably last up to a week, but I haven’t been able to test this.
-
 ## Notes
 
 - If you prefer your cookies closer in sweetness to a standard sugar cookie, add an additional ¼ to ½ cup sugar (this will change the baking time so you’re on your own).
