@@ -11,10 +11,12 @@ use gray_matter::ParsedEntity;
 use kuchikiki::traits::TendrilSink;
 use markdown::{CompileOptions, ParseOptions};
 
+mod checksum;
 mod html;
 mod state;
 mod types;
-use state::{calculate_checksum_globs, calculate_checksum_str, StateManager};
+use checksum::Checksum;
+use state::StateManager;
 use types::{FrontPageInfo, PageFrontMatter};
 
 static CONTENT_DIR: LazyLock<PathBuf> = LazyLock::new(|| "content".into());
@@ -24,7 +26,7 @@ static WEBSITE_DIR: LazyLock<PathBuf> = LazyLock::new(|| "website".into());
 static STATE_FILE: LazyLock<PathBuf> = LazyLock::new(|| "state.json".into());
 
 /// File patterns that trigger a full site rebuild when any matching file changes.
-static FORCE_REBUILD_PATTERNS: &[&str] = &["templates/*.html", "src/*.rs"];
+static FULL_REBUILD_GLOBS: &[&str] = &["templates/*.html", "src/*.rs"];
 
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
     use gray_matter::engine::YAML;
@@ -87,11 +89,10 @@ fn main() -> Result<()> {
     let mut posts = Vec::<FrontPageInfo>::new();
     let mut state = StateManager::from_path(&*STATE_FILE)?;
 
-    // Check if force-rebuild files changed (triggers full regeneration)
-    let force_rebuild_checksum = calculate_checksum_globs(FORCE_REBUILD_PATTERNS);
-    let force_regenerate = state.set_force_rebuild_checksum(force_rebuild_checksum.into());
-    if force_regenerate {
-        println!("Force-rebuild files changed, regenerating all pages...");
+    // Set full-rebuild checksum (templates, source code, etc.)
+    let full_rebuild_checksum = Checksum::from_globs(FULL_REBUILD_GLOBS);
+    if state.set_full_rebuild_checksum(full_rebuild_checksum) {
+        println!("Full-rebuild files changed, regenerating all pages...");
     }
 
     let markdown_options = markdown::Options {
@@ -145,10 +146,11 @@ fn main() -> Result<()> {
             slug.clone(),
         );
 
-        // Skip if contents haven't changed (unless force regenerating)
-        let file_checksum = calculate_checksum_str(&file_contents);
-        if !force_regenerate && !state.contents_changed(&slug, &file_checksum) {
-            state.add_or_keep(slug, file_checksum.to_string());
+        let file_checksum = Checksum::from_data(&file_contents);
+        state.set_checksum(slug.clone(), file_checksum);
+
+        // Skip if a rebuild not needed
+        if !state.should_rebuild(&slug) {
             posts.push(front_page_info);
             // println!("skipped (no changes)");
             continue;
@@ -189,16 +191,15 @@ fn main() -> Result<()> {
         // println!("generated");
         println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
 
-        state.add_or_keep(slug, file_checksum.to_string());
         posts.push(front_page_info);
     }
 
     // Delete stale files
-    for slug in &state.get_stale_slugs() {
+    for slug in &state.get_slugs_to_delete() {
         fs::remove_dir_all(WEBSITE_DIR.join(slug)).unwrap();
     }
     // Save new state file
-    state.write_state_file(&*STATE_FILE)?;
+    state.write_state_file_and_commit()?;
 
     // Render home page.
     // Sort posts in reverse "date" field order (should be mostly sorted already,

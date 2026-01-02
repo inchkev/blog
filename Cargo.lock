@@ -108,7 +108,6 @@ dependencies = [
  "sha2",
  "syntect",
  "tera",
- "walkdir",
 ]
 
 [[package]]

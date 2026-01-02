@@ -1,42 +1,40 @@
-use std::boxed::Box;
 use std::collections::{HashMap, HashSet};
 use std::fs;
-use std::path::Path;
-use std::time::Instant;
+use std::path::{Path, PathBuf};
 
 use anyhow::Result;
-use base64::engine::general_purpose;
-use base64::Engine as _;
-use glob::glob;
 use serde::{Deserialize, Serialize};
-use sha2::digest::Output;
-use sha2::{Digest, Sha256};
 
-type Slug = String;
-type Checksum = String;
+use crate::checksum::Checksum;
 
 #[derive(Serialize, Deserialize)]
 struct Article {
-    slug: Slug,
+    slug: String,
     checksum: Checksum,
 }
 
 #[derive(Serialize, Deserialize, Default)]
+#[serde(rename_all = "camelCase")]
 struct StateFile {
     articles: Vec<Article>,
-    #[serde(default, alias = "watched_hash", alias = "watched_checksum")]
-    force_rebuild_checksum: Option<Checksum>,
+    full_rebuild_checksum: Option<Checksum>,
 }
 
 pub struct StateManager {
-    article_map: HashMap<Slug, Checksum>,
-    changed: HashMap<Slug, Checksum>,
-    force_rebuild_checksum: Option<Checksum>,
+    state_file_path: PathBuf,
+    /// Map of article slugs to their checksums for the previous build (loaded from state file).
+    curr_article_map: HashMap<String, Checksum>,
+    /// Map of article slugs to their checksums for the next build.
+    next_article_map: HashMap<String, Checksum>,
+    /// Full-rebuild checksum for the previous build (loaded from state file).
+    curr_full_rebuild_checksum: Option<Checksum>,
+    /// Full-rebuild checksum for the next build (set via `set_full_rebuild_checksum`).
+    next_full_rebuild_checksum: Option<Checksum>,
 }
 
 impl StateManager {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let json_data = fs::read_to_string(path)?;
+        let json_data = fs::read_to_string(&path)?;
         let state_file = serde_json::from_str::<StateFile>(&json_data)?;
 
         let map = state_file
@@ -46,29 +44,58 @@ impl StateManager {
             .collect::<HashMap<_, _>>();
 
         Ok(Self {
-            article_map: map,
-            changed: HashMap::new(),
-            force_rebuild_checksum: state_file.force_rebuild_checksum,
+            state_file_path: path.as_ref().to_path_buf(),
+            curr_article_map: map,
+            next_article_map: HashMap::new(),
+            curr_full_rebuild_checksum: state_file.full_rebuild_checksum,
+            next_full_rebuild_checksum: None,
         })
     }
 
-    pub fn contents_changed(&self, slug: &str, checksum: &str) -> bool {
-        let Some(c) = self.article_map.get(slug) else {
+    /// Set the current checksum for full-rebuild files.
+    /// Returns whether or not the checksum has changed.
+    pub fn set_full_rebuild_checksum(&mut self, checksum: Checksum) -> bool {
+        let changed = self.curr_full_rebuild_checksum.as_ref() != Some(&checksum);
+        self.next_full_rebuild_checksum = Some(checksum);
+        changed
+    }
+
+    /// Register an article's checksum for the current build.
+    pub fn set_checksum(&mut self, slug: String, checksum: Checksum) {
+        _ = self.next_article_map.insert(slug, checksum);
+    }
+
+    /// Returns whether or not the article should be rebuilt, when:
+    /// - A full rebuild is required, OR
+    /// - The article is new (not in previous state), OR
+    /// - The article's content checksum next_article_map.
+    ///
+    /// Must be called after `set_checksum` for the given slug.
+    pub fn should_rebuild(&self, slug: &str) -> bool {
+        // Full rebuild if watched files next_article_map
+        if self.curr_full_rebuild_checksum != self.next_full_rebuild_checksum {
+            return true;
+        }
+        // Rebuild if article is new
+        let Some(prev_checksum) = self.curr_article_map.get(slug) else {
             return true;
         };
-        c != checksum
+        // Rebuild if article has been modified
+        let Some(next_checksum) = self.next_article_map.get(slug) else {
+            return true;
+        };
+        prev_checksum != next_checksum
     }
 
-    pub fn add_or_keep(&mut self, slug: String, checksum: String) {
-        _ = self.changed.insert(slug, checksum);
-    }
-
-    pub fn get_stale_slugs(&self) -> Vec<Slug> {
-        if self.article_map.is_empty() {
+    /// Returns article slugs that should be deleted, i.e. ones that existed
+    /// in the previous build but weren't seen in the next..
+    pub fn get_slugs_to_delete(&self) -> Vec<String> {
+        if self.curr_article_map.is_empty() {
             return vec![];
         }
-        let map_keys: HashSet<_> = self.article_map.keys().collect();
-        let changed_keys: HashSet<_> = self.changed.keys().collect();
+        let map_keys: HashSet<_> = self.curr_article_map.keys().collect();
+        let changed_keys: HashSet<_> = self.next_article_map.keys().collect();
+        // Slugs in the old state but not in the current run = deleted articles
         map_keys
             .difference(&changed_keys)
             .copied()
@@ -76,9 +103,19 @@ impl StateManager {
             .collect()
     }
 
-    pub fn write_state_file<P: AsRef<Path>>(&self, path: P) -> Result<()> {
+    /// Write to state file and commit changes.
+    ///
+    /// Skips writing if nothing next_article_map.
+    pub fn write_state_file_and_commit(&mut self) -> Result<()> {
+        // Skip if nothing next_article_map
+        if self.curr_full_rebuild_checksum == self.next_full_rebuild_checksum
+            && self.curr_article_map == self.next_article_map
+        {
+            return Ok(());
+        }
+
         let articles: Vec<Article> = self
-            .changed
+            .next_article_map
             .iter()
             .map(|(slug, checksum)| Article {
                 slug: slug.clone(),
@@ -87,67 +124,16 @@ impl StateManager {
             .collect();
         let state_file = StateFile {
             articles,
-            force_rebuild_checksum: self.force_rebuild_checksum.clone(),
+            full_rebuild_checksum: self.next_full_rebuild_checksum.clone(),
         };
         let data = serde_json::to_string(&state_file)?;
-        fs::write(path, data)?;
+        fs::write(&self.state_file_path, data)?;
+        self.commit();
         Ok(())
     }
 
-    /// Set the current checksum for force-rebuild files and return whether it changed.
-    pub fn set_force_rebuild_checksum(&mut self, checksum: Checksum) -> bool {
-        let changed = self.force_rebuild_checksum.as_ref() != Some(&checksum);
-        self.force_rebuild_checksum = Some(checksum);
-        changed
-    }
-}
-
-pub fn calculate_checksum_str(content: &str) -> Box<str> {
-    let hash_result = Sha256::digest(content);
-    encode_sha256_as_base64(&hash_result)
-}
-
-/// Calculates a checksum for all files matching the given glob patterns.
-pub fn calculate_checksum_globs<S: AsRef<str> + Ord>(patterns: &[S]) -> Box<str> {
-    let start = Instant::now();
-
-    let mut hasher = Sha256::new();
-
-    let mut sorted_patterns: Vec<_> = patterns.iter().collect();
-    sorted_patterns.sort();
-
-    for pattern in sorted_patterns {
-        let mut paths: Vec<_> = glob(pattern.as_ref())
-            .into_iter()
-            .flatten()
-            .filter_map(std::result::Result::ok)
-            .filter(|p| p.is_file())
-            .collect();
-        paths.sort();
-
-        for path in paths {
-            if let Ok(contents) = fs::read(&path) {
-                hasher.update(&contents);
-            }
-        }
-    }
-
-    let hash_result = hasher.finalize();
-    println!("calculate_checksum_globs took {:?}", start.elapsed());
-
-    encode_sha256_as_base64(&hash_result)
-}
-
-fn encode_sha256_as_base64(hash: &Output<Sha256>) -> Box<str> {
-    // SHA256 (32 bytes) encodes to exactly 44 Base64 characters
-    let mut buf = [0u8; 44];
-    let _ = general_purpose::STANDARD
-        .encode_slice(hash, &mut buf)
-        .unwrap();
-    // SAFETY: Base64 strings are always valid UTF-8
-    unsafe {
-        let boxed_bytes: Box<[u8]> = Box::from(buf);
-        let ptr = Box::into_raw(boxed_bytes) as *mut str;
-        Box::from_raw(ptr)
+    fn commit(&mut self) {
+        self.curr_article_map = std::mem::take(&mut self.next_article_map);
+        self.curr_full_rebuild_checksum = self.next_full_rebuild_checksum.take();
     }
 }
