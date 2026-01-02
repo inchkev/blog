@@ -61,7 +61,8 @@ fn ts() -> &'static syntect::highlighting::ThemeSet {
 fn process_html<P: AsRef<Path>>(html: &str, page_dir: P) -> Result<(String, bool)> {
     let document = kuchikiki::parse_html().one(html);
 
-    html::copy_media_and_add_dimensions(&document, page_dir)?;
+    html::copy_images_and_add_dimensions(&document, page_dir)?;
+    html::wrap_images_with_figure_tags(&document);
     let has_code_blocks = html::has_code_blocks(&document);
     if has_code_blocks {
         html::syntax_highlight_code_blocks(&document);

@@ -5,14 +5,20 @@
   let scrollHandler;
 
   window.windowfull = {
-    full(element) {
+    full(imgElement) {
       fullwindowDiv = document.createElement('div');
-      const img = document.createElement('img');
-      img.src = element.src;
-      img.alt = element.alt;
-
-      fullwindowDiv.appendChild(img);
       fullwindowDiv.classList.add('fullscreen');
+
+      const figure = imgElement.closest('figure');
+      if (figure) {
+        // Clone the entire figure (img + figcaption)
+        const clonedFigure = figure.cloneNode(true);
+        fullwindowDiv.appendChild(clonedFigure);
+      } else {
+        const clonedImg = imgElement.cloneNode(true);
+        fullwindowDiv.appendChild(clonedImg);
+      }
+
       document.body.appendChild(fullwindowDiv);
 
       fullwindowDiv.addEventListener('click', () => {

@@ -174,10 +174,25 @@ header a:hover, footer a:hover {
 img, video {
   max-width: 100%;
   height: auto;
-  margin-top: 0.5rem;
+  margin-top: 0.6rem;
+  margin-bottom: 0.6rem;
 }
 img {
   cursor: grab;
+}
+figure {
+  margin: 0;
+}
+figure img {
+  display: block;
+  padding-top: 0.6rem;
+  margin-bottom: 0.1rem;
+}
+figcaption {
+  font-family: -apple-system, "system-ui", "Segoe UI", "Noto Sans", Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+  color: var(--green);
+  font-size: 12px;
+  text-align: center;
 }
 
 /* CODE BLOCKS, QUOTES, ASIDES */
@@ -271,7 +286,7 @@ a[data-footnote-ref]::after {
 
 /* IMAGE FULLSCREEN */
 .fullscreen {
-  background-color: rgba(255, 255, 255, 0.85);
+  background-color: rgba(255, 255, 255, 0.9);
   cursor: grab;
 
   position: fixed;
@@ -284,7 +299,17 @@ a[data-footnote-ref]::after {
   align-items: center;
   justify-content: center;
 }
+/* thank u nezu.world for the fullscreen design inspo */
+.fullscreen > * {
+  max-height: calc(100% - 4rem);
+}
 .fullscreen img {
-  max-height: calc(100% - 10rem);
-  object-fit: contain;
+  max-height: inherit;
+  margin: 0;
+  padding: 0;
+}
+.fullscreen figure {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
 }

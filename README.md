@@ -1,9 +1,19 @@
-# blog
+## build
 
-Kevin's blog
-
-## installation
+once
 
 ```console
-cargo run
+cargo run --release
 ```
+
+perpetually
+
+```console
+./watch.sh
+```
+
+## stack :sparkles:
+
+- rust ("framework")
+- jinja (templates)
+- markdown ("cms")

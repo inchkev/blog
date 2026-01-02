@@ -1,3 +1,4 @@
+use std::fs;
 use std::path::Path;
 use std::sync::LazyLock;
 
@@ -5,6 +6,7 @@ use anyhow::Result;
 use kuchikiki::iter::Siblings;
 use kuchikiki::traits::TendrilSink;
 use kuchikiki::NodeRef;
+use markup5ever::{local_name, namespace_url, ns, QualName};
 use syntect::html::{ClassStyle, ClassedHTMLGenerator};
 use syntect::util::LinesWithEndings;
 
@@ -34,7 +36,7 @@ pub fn finish(document: &NodeRef) -> String {
         .collect()
 }
 
-pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(
+pub fn copy_images_and_add_dimensions<P: AsRef<Path>>(
     document: &NodeRef,
     move_dir: P,
 ) -> Result<()> {
@@ -47,7 +49,7 @@ pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(
         let img_path = CONTENT_DIR.join(&img_src);
         let img_dest = move_dir.as_ref().join(&img_src);
 
-        std::fs::copy(img_path, img_dest)?;
+        fs::copy(img_path, img_dest)?;
 
         let mut attributes_mut = img_tag.attributes.borrow_mut();
         // attributes_mut.insert("srcset", img_src.to_owned());
@@ -60,6 +62,47 @@ pub fn copy_media_and_add_dimensions<P: AsRef<Path>>(
         }
     }
     Ok(())
+}
+
+pub fn wrap_images_with_figure_tags(document: &NodeRef) {
+    for img_tag in document.select("img[title]").unwrap() {
+        let img_node = img_tag.as_node();
+
+        // Get the title attribute value
+        let maybe_title = {
+            let attributes = img_tag.attributes.borrow();
+            attributes.get("title").map(ToOwned::to_owned)
+        };
+        let Some(caption_text) = maybe_title else {
+            continue;
+        };
+
+        {
+            // Remove the title attribute
+            let mut attributes = img_tag.attributes.borrow_mut();
+            attributes.remove("title");
+
+            // If there is no alt text, set it as the caption text
+            if attributes.get("alt").is_none_or(str::is_empty) {
+                attributes.insert("alt", caption_text.clone());
+            }
+        }
+
+        // Create figure and figcaption elements
+        let figure =
+            NodeRef::new_element(QualName::new(None, ns!(html), local_name!("figure")), None);
+        let figcaption = NodeRef::new_element(
+            QualName::new(None, ns!(html), local_name!("figcaption")),
+            None,
+        );
+        figcaption.append(NodeRef::new_text(&caption_text));
+
+        // Insert figure before img, move img into figure, add figcaption
+        img_node.insert_before(figure.clone());
+        img_node.detach();
+        figure.append(img_node.clone());
+        figure.append(figcaption);
+    }
 }
 
 pub fn has_code_blocks(document: &NodeRef) -> bool {
