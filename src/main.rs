@@ -24,3 +24,7 @@ fn main() -> Result<()> {
 
     Ok(())
 }
+
+// todos:
+// - parallelize article processing
+// - bufwriter?

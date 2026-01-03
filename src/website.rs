@@ -26,10 +26,6 @@ const THEME_DIR: &str = "themes";
 const OUTPUT_DIR: &str = "website";
 const STATE_FILE: &str = "state.json";
 
-// todos:
-// - parallelize article processing
-// - bufwriter?
-
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
     use gray_matter::engine::YAML;
     use gray_matter::Matter;
@@ -143,7 +139,7 @@ impl Website {
         // Ensure output directory exists
         fs::create_dir_all(&self.output_path)?;
 
-        let mut posts = Vec::<FrontPageInfo>::new();
+        let mut pages = Vec::<FrontPageInfo>::new();
 
         // Get checksum for files that can trigger a full rebuild
         let full_rebuild_checksum = Checksum::from_globs_par(FULL_REBUILD_GLOBS);
@@ -199,7 +195,7 @@ impl Website {
 
             // Skip if a rebuild not needed
             if !self.state_manager.should_rebuild(&slug) {
-                posts.push(front_page_info);
+                pages.push(front_page_info);
                 // println!("skipped (no changes)");
                 continue;
             }
@@ -242,7 +238,7 @@ impl Website {
 
             println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
 
-            posts.push(front_page_info);
+            pages.push(front_page_info);
         }
 
         // Delete stale files
@@ -252,15 +248,15 @@ impl Website {
             fs::remove_dir_all(delete_path)?;
         }
 
-        // Sort posts in reverse "date" field order (should be mostly sorted already,
+        // Sort pages in reverse "date" field order (should be mostly sorted already,
         // since we've walked the directory in reverse file creation date.
-        posts.sort_by(|a, b| b.date().cmp(a.date()));
+        pages.sort_by(|a, b| b.date().cmp(a.date()));
 
         // Build home page (index).
-        let index_checksum = Checksum::from_data(&serde_json::to_string(&posts)?);
+        let index_checksum = Checksum::from_data(&serde_json::to_string(&pages)?);
         self.state_manager.set_index_checksum(index_checksum);
         if self.state_manager.should_rebuild_index() {
-            let index_context = HashMap::from([("posts", &posts)]);
+            let index_context = HashMap::from([("pages", &pages)]);
             let rendered = self
                 .tera()
                 .render("index.html", &tera::Context::from_serialize(index_context)?)?;

@@ -9,9 +9,9 @@
       </header>
 
       <div class="posts">
-      {%- for post in posts %}
+      {%- for page in pages %}
         <p class="post">
-          <a href="{{ post.slug }}">{{ post.date }} -- {{ post.title }}</a>
+          <a href="{{ page.slug }}">{{ page.date }} -- {{ page.title }}</a>
         </p>
       {%- endfor %}
       </div>
