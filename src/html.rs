@@ -10,8 +10,6 @@ use markup5ever::{local_name, namespace_url, ns, QualName};
 use syntect::html::{ClassStyle, ClassedHTMLGenerator};
 use syntect::util::LinesWithEndings;
 
-use crate::CONTENT_DIR;
-
 pub const SYNTECT_CLASSSTYLE: ClassStyle = ClassStyle::SpacedPrefixed { prefix: "_" };
 
 #[must_use]
@@ -38,6 +36,7 @@ pub fn finish(document: &NodeRef) -> String {
 
 pub fn copy_images_and_add_dimensions<P: AsRef<Path>>(
     document: &NodeRef,
+    content_dir: P,
     move_dir: P,
 ) -> Result<()> {
     for img_tag in document.select("img").unwrap() {
@@ -46,17 +45,17 @@ pub fn copy_images_and_add_dimensions<P: AsRef<Path>>(
             attributes.get("src").unwrap_or_default().to_owned()
         };
 
-        let img_path = CONTENT_DIR.join(&img_src);
+        let img_path = content_dir.as_ref().join(&img_src);
         let img_dest = move_dir.as_ref().join(&img_src);
 
-        fs::copy(img_path, img_dest)?;
+        fs::copy(&img_path, img_dest)?;
 
         let mut attributes_mut = img_tag.attributes.borrow_mut();
         // attributes_mut.insert("srcset", img_src.to_owned());
         // attributes_mut.insert("sizes", img_src.to_owned());
 
         // add image width/height attributes (prevents layout shifts)
-        if let Ok(img_dims) = get_image_dims(CONTENT_DIR.join(&img_src)) {
+        if let Ok(img_dims) = get_image_dims(&img_path) {
             attributes_mut.insert("width", img_dims.width.to_string());
             attributes_mut.insert("height", img_dims.height.to_string());
         }
