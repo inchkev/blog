@@ -7,4 +7,4 @@ if ! command -v cargo-watch &> /dev/null; then
 fi
 
 # Run cargo watch to monitor the content directory and execute `cargo run` on change
-cargo watch -w content -w templates -w src -x 'run --release'
+cargo watch -w content -w templates -w src -w config.toml -x 'run --release'

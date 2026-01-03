@@ -1,0 +1,5 @@
+# When set to "true", generated css files are minified.
+minify_css = false
+
+# When set to "true", generates draft pages as well.
+include_drafts = false

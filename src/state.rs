@@ -38,7 +38,7 @@ pub struct StateManager {
 }
 
 impl StateManager {
-    pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
         let json_data = fs::read_to_string(&path)?;
         let state_file = serde_json::from_str::<StateFile>(&json_data)?;
 

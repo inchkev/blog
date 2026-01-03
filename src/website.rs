@@ -13,9 +13,11 @@ use kuchikiki::traits::TendrilSink;
 use markdown::{CompileOptions, ParseOptions};
 
 use crate::checksum::Checksum;
+use crate::config::Config;
 use crate::html;
 use crate::state::StateManager;
 use crate::types::{FrontPageInfo, PageFrontMatter};
+use crate::FULL_REBUILD_GLOBS;
 
 // Default directory/file names
 const CONTENT_DIR: &str = "content";
@@ -23,9 +25,6 @@ const TEMPLATE_DIR: &str = "templates";
 const THEME_DIR: &str = "themes";
 const OUTPUT_DIR: &str = "website";
 const STATE_FILE: &str = "state.json";
-
-/// File patterns that trigger a full site rebuild when any matching file changes.
-static FULL_REBUILD_GLOBS: &[&str] = &["templates/*.html", "src/*.rs"];
 
 // todos:
 // - parallelize article processing
@@ -70,6 +69,7 @@ pub struct Website {
     output_path: PathBuf,
     #[allow(dead_code)]
     theme_path: PathBuf,
+    config: Config,
     state_manager: StateManager,
     markdown_options: markdown::Options,
     tera: OnceCell<tera::Tera>,
@@ -100,7 +100,7 @@ fn try_get_slug_from_path<P: AsRef<Path>>(path: P) -> Option<String> {
 }
 
 impl Website {
-    pub fn init<P: AsRef<Path>>(path: P) -> Result<Self> {
+    pub fn init<P: AsRef<Path>, Q: AsRef<Path>>(path: P, config_path: Q) -> Result<Self> {
         let base_path = path.as_ref().to_path_buf();
         let state_path = base_path.join(STATE_FILE);
         let content_path = base_path.join(CONTENT_DIR);
@@ -108,7 +108,8 @@ impl Website {
         let output_path = base_path.join(OUTPUT_DIR);
         let theme_path = base_path.join(THEME_DIR);
 
-        let state_manager = StateManager::from_path(&state_path)?;
+        let config = Config::from_file(config_path)?;
+        let state_manager = StateManager::from_file(&state_path)?;
 
         let markdown_options = markdown::Options {
             parse: ParseOptions::gfm(),
@@ -127,6 +128,7 @@ impl Website {
             template_path,
             output_path,
             theme_path,
+            config,
             state_manager,
             markdown_options,
             tera: OnceCell::new(),
@@ -138,6 +140,9 @@ impl Website {
     }
 
     pub fn bake(&mut self) -> Result<()> {
+        // Ensure output directory exists
+        fs::create_dir_all(&self.output_path)?;
+
         let mut posts = Vec::<FrontPageInfo>::new();
 
         // Get checksum for files that can trigger a full rebuild
@@ -168,7 +173,7 @@ impl Website {
                 continue;
             };
             let front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
-            if front_matter.draft() {
+            if front_matter.draft() && !self.config.include_drafts {
                 // println!("skipped (draft)");
                 continue;
             }
@@ -235,7 +240,6 @@ impl Website {
             let mut output_file = File::create(&output_path)?;
             output_file.write_all(rendered.as_bytes())?;
 
-            // println!("generated");
             println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
 
             posts.push(front_page_info);
@@ -243,7 +247,9 @@ impl Website {
 
         // Delete stale files
         for slug in &self.state_manager.get_slugs_to_delete() {
-            fs::remove_dir_all(self.output_path.join(slug))?;
+            let delete_path = self.output_path.join(slug);
+            println!("  DELETE {}/", delete_path.as_os_str().to_string_lossy());
+            fs::remove_dir_all(delete_path)?;
         }
 
         // Sort posts in reverse "date" field order (should be mostly sorted already,
