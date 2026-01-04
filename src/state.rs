@@ -39,8 +39,11 @@ pub struct StateManager {
 
 impl StateManager {
     pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
-        let json_data = fs::read_to_string(&path)?;
-        let state_file = serde_json::from_str::<StateFile>(&json_data)?;
+        let state_file = match fs::read_to_string(&path) {
+            Ok(json_data) => serde_json::from_str::<StateFile>(&json_data)?,
+            Err(e) if e.kind() == std::io::ErrorKind::NotFound => StateFile::default(),
+            Err(e) => return Err(e.into()),
+        };
 
         let map = state_file
             .articles

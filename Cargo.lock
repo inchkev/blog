@@ -105,6 +105,7 @@ dependencies = [
  "markdown",
  "markup5ever",
  "rayon",
+ "regex",
  "serde",
  "serde_json",
  "sha2",

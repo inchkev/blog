@@ -89,12 +89,12 @@ impl Page {
         let mut context = Context::new();
         context.insert("content", &self.content);
         context.insert("slug", &self.slug);
-        context.insert("title", &self.title);
+        context.insert("title", &self.title.as_deref().map(tera::escape_html));
         context.insert("date", &self.date);
         context.insert("has_code_block", &self.has_code_block);
         context.insert("draft", &self.draft);
         for (k, v) in &self.extra {
-            context.insert(k.as_ref(), v.as_ref());
+            context.insert(k.as_ref(), &tera::escape_html(v.as_ref()));
         }
         Ok(tera.render("page.html", &context)?)
     }
@@ -104,7 +104,7 @@ impl From<Page> for PartialPage {
     fn from(page: Page) -> Self {
         Self {
             slug: page.slug,
-            title: page.title,
+            title: page.title.as_deref().map(|t| tera::escape_html(t).into()),
             date: page.date,
             draft: page.draft,
         }

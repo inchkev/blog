@@ -39,7 +39,7 @@ I adapted this recipe primarily from Redditor _CatfromLongIsland_’s recipe for
 
 Store cookies in an loosely sealed tin/container at room temp with a paper towel. If you store them in an airtight container, the edges will lose their crispiness. They’ll probably last up to a week, but I haven’t been able to test this.
 
-![16 delicious almond sugar cookies, on a wire rack, on a granite countertop](IMG_7762.jpg "Sorry for the bad lighting")
+![16 delicious almond sugar cookies, on a wire rack, on a granite countertop](IMG_7762.JPG "Sorry for the bad lighting")
 
 ## Notes
 

@@ -1,7 +1,9 @@
 use std::cell::OnceCell;
 use std::cmp::Reverse;
+use std::collections::HashSet;
+use std::ffi::OsString;
 use std::fs::{self, File};
-use std::io::Write;
+use std::io::{self, Write};
 use std::path::{Path, PathBuf};
 use std::sync::LazyLock;
 
@@ -10,6 +12,7 @@ use glob::glob;
 use gray_matter::ParsedEntity;
 use kuchikiki::traits::TendrilSink;
 use markdown::{CompileOptions, ParseOptions};
+use regex::Regex;
 use tera::{Context, Tera};
 
 use crate::checksum::Checksum;
@@ -58,6 +61,64 @@ fn load_syntax_theme<P: AsRef<Path>>(theme: &str, theme_path: P, output_path: P)
     Ok(())
 }
 
+fn markdown_to_body_html(markdown: &str, options: &markdown::Options) -> (String, bool) {
+    let html = markdown::to_html_with_options(markdown, options).unwrap();
+    let html_document = kuchikiki::parse_html().one(html);
+    let has_code_blocks = html::has_code_blocks(&html_document);
+    if has_code_blocks {
+        html::syntax_highlight_code_blocks(&html_document);
+    }
+    // Get just what's inside the <body> tag
+    let body_content = html::get_body_children_of_document(&html_document)
+        .map(|nr| nr.to_string())
+        .collect();
+    (body_content, has_code_blocks)
+}
+
+/// - copy referenced images to output directory
+/// - add dimensions to images
+/// - wraps images with figure tags
+/// - updates references section
+///
+/// Returns (processed_html, copied_images).
+fn postprocess_html<P: AsRef<Path>>(
+    html: String,
+    content_dir: P,
+    page_dir: P,
+) -> Result<(String, Vec<String>)> {
+    // Find body content boundaries to avoid parsing the full document
+    // Exclude leading/trailing whitespace from parsing since kuchikiki/html5ever
+    //drops them
+    let body_start_re = Regex::new(r"<body[^>]*>\s*").unwrap();
+    let body_end_re = Regex::new(r"\s*</body>").unwrap();
+
+    let Some(start_match) = body_start_re.find(&html) else {
+        return Ok((html, vec![]));
+    };
+    let Some(end_match) = body_end_re.find(&html[start_match.end()..]) else {
+        return Ok((html, vec![]));
+    };
+    let start = start_match.end();
+    let end = start + end_match.start();
+
+    // Parse the body
+    let body_content = kuchikiki::parse_html().one(&html[start..end]);
+    let copied_images = html::copy_images_and_add_dimensions(&body_content, content_dir, page_dir)?;
+    html::wrap_images_with_figure_tags(&body_content);
+    html::update_references_section(&body_content);
+
+    // Re-serialize the body
+    let new_body: String = html::get_body_children_of_document(&body_content)
+        .map(|nr| nr.to_string())
+        .collect();
+
+    // Re-join
+    Ok((
+        format!("{}{}{}", &html[..start], new_body, &html[end..]),
+        copied_images,
+    ))
+}
+
 pub struct Website {
     #[allow(dead_code)]
     base_path: PathBuf,
@@ -70,20 +131,6 @@ pub struct Website {
     state_manager: StateManager,
     markdown_options: markdown::Options,
     tera: OnceCell<Tera>,
-}
-
-fn process_html<P: AsRef<Path>>(html: &str, content_dir: P, page_dir: P) -> Result<(String, bool)> {
-    let document = kuchikiki::parse_html().one(html);
-
-    html::copy_images_and_add_dimensions(&document, content_dir, page_dir)?;
-    html::wrap_images_with_figure_tags(&document);
-    let has_code_blocks = html::has_code_blocks(&document);
-    if has_code_blocks {
-        html::syntax_highlight_code_blocks(&document);
-    }
-    html::update_references_section(&document);
-
-    Ok((html::finish(&document), has_code_blocks))
 }
 
 impl Website {
@@ -202,33 +249,53 @@ impl Website {
                 continue;
             }
 
-            // Never errors with normal markdown
-            let html_contents =
-                markdown::to_html_with_options(&parsed_file.content, &self.markdown_options)
-                    .unwrap();
-
-            // Create directory for page
+            // Create new page directory, or collect existing files for cleanup later
             let page_dir = self.output_path.join(page_slug);
-            if let Ok(false) = page_dir.try_exists() {
-                fs::create_dir(&page_dir).unwrap();
-            }
+            let existing_files: HashSet<OsString> = match fs::read_dir(&page_dir) {
+                Ok(entries) => entries
+                    .filter_map(|entry| entry.ok())
+                    .map(|entry| entry.file_name())
+                    .filter(|name| name != "index.html")
+                    .collect(),
+                Err(e) if e.kind() == io::ErrorKind::NotFound => {
+                    fs::create_dir(&page_dir)?;
+                    HashSet::new()
+                }
+                Err(e) => {
+                    eprintln!("Error reading page directory {}:\n{e}", page_dir.display());
+                    continue;
+                }
+            };
 
-            // - re-formats the generated html
-            // - copies images to each page's directory
-            // - and more. see function
-            let (html_contents, has_code_blocks) =
-                process_html(&html_contents, &self.content_path, &page_dir)?;
-            page.set_content(html_contents)
+            // Convert markdown to body HTML. The `markdown-rs` crate returns
+            // a full HTML page, but we only want its body to then be passed
+            // to Tera.
+            let (body_contents, has_code_blocks) =
+                markdown_to_body_html(&parsed_file.content, &self.markdown_options);
+            page.set_content(body_contents)
                 .set_has_code_block(has_code_blocks);
-
-            // Render article page
             let rendered_page = page.parbake(self.tera())?;
+            let (rendered_page, copied_images) =
+                postprocess_html(rendered_page, &self.content_path, &page_dir)?;
 
+            // Create the page's index.html.
             let output_path = page_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
             output_file.write_all(rendered_page.as_bytes())?;
 
             println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
+
+            // Delete leftover (stale) files in the page directory.
+            let copied_set: HashSet<OsString> =
+                copied_images.into_iter().map(OsString::from).collect();
+            for stale_file in existing_files.difference(&copied_set) {
+                let stale_path = page_dir.join(stale_file);
+                if let Err(e) = fs::remove_file(&stale_path) {
+                    eprintln!("Error deleting stale file {}:\n{e}", stale_path.display());
+                } else {
+                    println!("  DELETE {}", stale_path.display());
+                }
+            }
 
             page_bundle.add_page(page);
         }
@@ -252,6 +319,8 @@ impl Website {
         self.state_manager.set_index_checksum(index_checksum);
         if self.state_manager.should_rebuild_index() {
             let rendered_index = page_bundle.parbake(self.tera())?;
+            let (rendered_index, _) =
+                postprocess_html(rendered_index, &self.content_path, &self.output_path)?;
 
             let index_path = self.output_path.join("index.html");
             let mut index_file = File::create(&index_path)?;

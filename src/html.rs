@@ -24,43 +24,49 @@ fn get_image_dims<P: AsRef<Path>>(path: P) -> Result<imagesize::ImageSize> {
     Ok(size)
 }
 
-fn get_body_children_of_document(document: &NodeRef) -> Siblings {
+pub fn get_body_children_of_document(document: &NodeRef) -> Siblings {
     document.select_first("body").unwrap().as_node().children()
 }
 
-pub fn finish(document: &NodeRef) -> String {
-    get_body_children_of_document(document)
-        .map(|nr| nr.to_string())
-        .collect()
-}
-
-pub fn copy_images_and_add_dimensions<P: AsRef<Path>>(
+/// Copies images referenced in the document to the output directory and adds
+/// dimensions attributes to the image tags.
+///
+/// Returns a list of copied filenames.
+pub fn copy_images_and_add_dimensions<P: AsRef<Path>, Q: AsRef<Path>>(
     document: &NodeRef,
-    content_dir: P,
-    move_dir: P,
-) -> Result<()> {
+    from_dir: P,
+    to_dir: Q,
+) -> Result<Vec<String>> {
+    let mut copied_files = Vec::new();
+
     for img_tag in document.select("img").unwrap() {
         let img_src = {
             let attributes = img_tag.attributes.borrow();
-            attributes.get("src").unwrap_or_default().to_owned()
+            let Some(img_src) = attributes.get("src").map(ToOwned::to_owned) else {
+                continue;
+            };
+            img_src
         };
 
-        let img_path = content_dir.as_ref().join(&img_src);
-        let img_dest = move_dir.as_ref().join(&img_src);
+        let img_path = from_dir.as_ref().join(&img_src);
+        let img_dest = to_dir.as_ref().join(&img_src);
 
-        fs::copy(&img_path, img_dest)?;
+        fs::copy(&img_path, &img_dest)?;
 
-        let mut attributes_mut = img_tag.attributes.borrow_mut();
-        // attributes_mut.insert("srcset", img_src.to_owned());
-        // attributes_mut.insert("sizes", img_src.to_owned());
+        let mut attributes = img_tag.attributes.borrow_mut();
+
+        // attributes.insert("srcset", img_src.to_owned());
+        // attributes.insert("sizes", img_src.to_owned());
 
         // add image width/height attributes (prevents layout shifts)
         if let Ok(img_dims) = get_image_dims(&img_path) {
-            attributes_mut.insert("width", img_dims.width.to_string());
-            attributes_mut.insert("height", img_dims.height.to_string());
+            attributes.insert("width", img_dims.width.to_string());
+            attributes.insert("height", img_dims.height.to_string());
         }
+
+        copied_files.push(img_src);
     }
-    Ok(())
+    Ok(copied_files)
 }
 
 pub fn wrap_images_with_figure_tags(document: &NodeRef) {
