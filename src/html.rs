@@ -47,6 +47,9 @@ pub fn copy_images_and_add_dimensions<P: AsRef<Path>, Q: AsRef<Path>>(
             };
             img_src
         };
+        if img_src.is_empty() {
+            continue;
+        }
 
         let img_path = from_dir.as_ref().join(&img_src);
         let img_dest = to_dir.as_ref().join(&img_src);

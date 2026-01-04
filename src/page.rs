@@ -107,6 +107,7 @@ impl From<Page> for PartialPage {
             title: page.title.as_deref().map(|t| tera::escape_html(t).into()),
             date: page.date,
             draft: page.draft,
+            extra: page.extra,
         }
     }
 }
@@ -117,6 +118,8 @@ pub struct PartialPage {
     title: Option<Box<str>>,
     date: Box<str>,
     draft: bool,
+    #[serde(flatten)]
+    extra: HashMap<Box<str>, Box<str>>,
 }
 
 impl PartialPage {

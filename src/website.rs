@@ -104,6 +104,7 @@ fn postprocess_html<P: AsRef<Path>>(
     // Parse the body
     let body_content = kuchikiki::parse_html().one(&html[start..end]);
     let copied_images = html::copy_images_and_add_dimensions(&body_content, content_dir, page_dir)?;
+    // TODO: this should really be done around markdown parsing time instead
     html::wrap_images_with_figure_tags(&body_content);
     html::update_references_section(&body_content);
 
@@ -197,9 +198,6 @@ impl Website {
         content_paths.sort_by_key(|p| Reverse(p.metadata().ok().and_then(|m| m.created().ok())));
 
         for path in content_paths {
-            // print!("READ {} ... ", path.as_os_str().to_string_lossy());
-            // stdout().flush()?;
-
             let file_contents = match fs::read_to_string(&path) {
                 Ok(contents) => contents,
                 Err(e) => {
@@ -276,7 +274,13 @@ impl Website {
                 .set_has_code_block(has_code_blocks);
             let rendered_page = page.parbake(self.tera())?;
             let (rendered_page, copied_images) =
-                postprocess_html(rendered_page, &self.content_path, &page_dir)?;
+                match postprocess_html(rendered_page, &self.content_path, &page_dir) {
+                    Ok(result) => result,
+                    Err(e) => {
+                        eprintln!("Error postprocessing {}:\n{e}", page.slug());
+                        continue;
+                    }
+                };
 
             // Create the page's index.html.
             let output_path = page_dir.join("index.html");
@@ -300,7 +304,7 @@ impl Website {
             page_bundle.add_page(page);
         }
 
-        // Delete stale files
+        // Delete stale page directories
         for slug in &self.state_manager.get_slugs_to_delete() {
             let delete_path = self.output_path.join(slug);
             if let Err(e) = fs::remove_dir_all(&delete_path) {
@@ -310,7 +314,7 @@ impl Website {
                 );
                 continue;
             }
-            println!("  DELETE {}/", delete_path.as_os_str().to_string_lossy());
+            println!("DELETE {}/", delete_path.as_os_str().to_string_lossy());
         }
 
         // Build home page (index).
