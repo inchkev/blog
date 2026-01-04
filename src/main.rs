@@ -5,8 +5,9 @@ use anyhow::Result;
 mod checksum;
 mod config;
 mod html;
+mod page;
+mod page_bundle;
 mod state;
-mod types;
 mod website;
 
 use website::Website;

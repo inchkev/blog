@@ -1,6 +1,5 @@
 use std::cell::OnceCell;
 use std::cmp::Reverse;
-use std::collections::HashMap;
 use std::fs::{self, File};
 use std::io::Write;
 use std::path::{Path, PathBuf};
@@ -15,8 +14,9 @@ use markdown::{CompileOptions, ParseOptions};
 use crate::checksum::Checksum;
 use crate::config::Config;
 use crate::html;
+use crate::page::{Page, PageFrontMatter};
+use crate::page_bundle::PageBundle;
 use crate::state::StateManager;
-use crate::types::{FrontPageInfo, PageFrontMatter};
 use crate::FULL_REBUILD_GLOBS;
 
 // Default directory/file names
@@ -85,16 +85,6 @@ fn process_html<P: AsRef<Path>>(html: &str, content_dir: P, page_dir: P) -> Resu
     Ok((html::finish(&document), has_code_blocks))
 }
 
-fn try_get_slug_from_path<P: AsRef<Path>>(path: P) -> Option<String> {
-    let stem = path.as_ref().file_stem()?.to_str()?;
-    let (_date, slug) = stem.split_once('_')?;
-    if slug.is_empty() {
-        None
-    } else {
-        Some(slug.to_owned())
-    }
-}
-
 impl Website {
     pub fn init<P: AsRef<Path>, Q: AsRef<Path>>(path: P, config_path: Q) -> Result<Self> {
         let base_path = path.as_ref().to_path_buf();
@@ -139,7 +129,7 @@ impl Website {
         // Ensure output directory exists
         fs::create_dir_all(&self.output_path)?;
 
-        let mut pages = Vec::<FrontPageInfo>::new();
+        let mut page_bundle = PageBundle::default();
 
         // Get checksum for files that can trigger a full rebuild
         let full_rebuild_checksum = Checksum::from_globs_par(FULL_REBUILD_GLOBS);
@@ -168,34 +158,24 @@ impl Website {
                 // println!("skipped (no data)");
                 continue;
             };
-            let front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
-            if front_matter.draft() && !self.config.include_drafts {
+
+            let page_front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
+            if page_front_matter.draft() && !self.config.include_drafts {
                 // println!("skipped (draft)");
                 continue;
             }
 
-            let slug = if let Some(s) = front_matter.slug() {
-                s.to_string()
-            } else {
-                let Some(s) = try_get_slug_from_path(&path) else {
-                    // println!("skipped (no slug)");
-                    continue;
-                };
-                s
+            let Ok(mut page) = Page::try_from_front_matter(page_front_matter, &path) else {
+                continue;
             };
-
-            let front_page_info = FrontPageInfo::new(
-                front_matter.title().unwrap_or(&slug),
-                front_matter.date(),
-                slug.clone(),
-            );
+            let page_slug = page.slug();
 
             let file_checksum = Checksum::from_data(&file_contents);
-            self.state_manager.set_checksum(slug.clone(), file_checksum);
-
-            // Skip if a rebuild not needed
-            if !self.state_manager.should_rebuild(&slug) {
-                pages.push(front_page_info);
+            self.state_manager
+                .set_checksum(page_slug.to_string(), file_checksum);
+            // Skip if page itself does not need to be rebuilt
+            if !self.state_manager.should_rebuild(page_slug) {
+                page_bundle.add_page(page);
                 // println!("skipped (no changes)");
                 continue;
             }
@@ -205,40 +185,29 @@ impl Website {
                     .unwrap();
 
             // Create directory for page
-            let page_dir = self.output_path.join(&slug);
+            let page_dir = self.output_path.join(page_slug);
             if let Ok(false) = page_dir.try_exists() {
-                fs::create_dir(self.output_path.join(&slug)).unwrap();
+                fs::create_dir(&page_dir).unwrap();
             }
-
-            let mut post_context = front_page_info.to_map();
 
             // - re-formats the generated html
             // - copies images to each page's directory
             // - and more. see function
             let (html_contents, has_code_blocks) =
                 process_html(&html_contents, &self.content_path, &page_dir)?;
-
-            post_context.insert("contents", html_contents.into());
-            post_context.insert("hascodeblock", has_code_blocks.into());
-            post_context.extend(
-                front_matter
-                    .all_else()
-                    .iter()
-                    .map(|(k, v)| (k.as_ref(), v.as_ref().into())),
-            );
+            page.set_content(html_contents)
+                .set_has_code_block(has_code_blocks);
 
             // Render article page
-            let rendered = self
-                .tera()
-                .render("page.html", &tera::Context::from_serialize(post_context)?)?;
+            let rendered_page = page.parbake(self.tera())?;
 
             let output_path = page_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
-            output_file.write_all(rendered.as_bytes())?;
+            output_file.write_all(rendered_page.as_bytes())?;
 
             println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
 
-            pages.push(front_page_info);
+            page_bundle.add_page(page);
         }
 
         // Delete stale files
@@ -248,22 +217,16 @@ impl Website {
             fs::remove_dir_all(delete_path)?;
         }
 
-        // Sort pages in reverse "date" field order (should be mostly sorted already,
-        // since we've walked the directory in reverse file creation date.
-        pages.sort_by(|a, b| b.date().cmp(a.date()));
-
         // Build home page (index).
-        let index_checksum = Checksum::from_data(&serde_json::to_string(&pages)?);
+        page_bundle.sort_pages();
+        let index_checksum = Checksum::from_data(&serde_json::to_string(&page_bundle.pages())?);
         self.state_manager.set_index_checksum(index_checksum);
         if self.state_manager.should_rebuild_index() {
-            let index_context = HashMap::from([("pages", &pages)]);
-            let rendered = self
-                .tera()
-                .render("index.html", &tera::Context::from_serialize(index_context)?)?;
+            let rendered_index = page_bundle.parbake(self.tera())?;
 
             let index_path = self.output_path.join("index.html");
             let mut index_file = File::create(&index_path)?;
-            index_file.write_all(rendered.as_bytes())?;
+            index_file.write_all(rendered_index.as_bytes())?;
 
             println!("WRITE {}", index_path.as_os_str().to_string_lossy());
         }
