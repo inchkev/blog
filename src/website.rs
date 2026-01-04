@@ -10,6 +10,7 @@ use glob::glob;
 use gray_matter::ParsedEntity;
 use kuchikiki::traits::TendrilSink;
 use markdown::{CompileOptions, ParseOptions};
+use tera::{Context, Tera};
 
 use crate::checksum::Checksum;
 use crate::config::Config;
@@ -33,8 +34,8 @@ fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
     &MATTER
 }
 
-fn create_tera<P: AsRef<Path>>(template_path: P) -> tera::Tera {
-    let mut tera = tera::Tera::new(&template_path.as_ref().join("*.html").to_string_lossy())
+fn create_tera<P: AsRef<Path>>(template_path: P) -> Tera {
+    let mut tera = Tera::new(&template_path.as_ref().join("*.html").to_string_lossy())
         .unwrap_or_else(|e| panic!("{e}"));
     tera.autoescape_on(vec![]);
     tera
@@ -68,7 +69,7 @@ pub struct Website {
     config: Config,
     state_manager: StateManager,
     markdown_options: markdown::Options,
-    tera: OnceCell<tera::Tera>,
+    tera: OnceCell<Tera>,
 }
 
 fn process_html<P: AsRef<Path>>(html: &str, content_dir: P, page_dir: P) -> Result<(String, bool)> {
@@ -121,7 +122,7 @@ impl Website {
         })
     }
 
-    fn tera(&self) -> &tera::Tera {
+    fn tera(&self) -> &Tera {
         self.tera.get_or_init(|| create_tera(&self.template_path))
     }
 
@@ -133,10 +134,10 @@ impl Website {
 
         // Get checksum for files that can trigger a full rebuild
         let full_rebuild_checksum = Checksum::from_globs_par(FULL_REBUILD_GLOBS);
-        if self
+        let full_rebuild = self
             .state_manager
-            .set_full_rebuild_checksum(full_rebuild_checksum)
-        {
+            .set_full_rebuild_checksum(full_rebuild_checksum);
+        if full_rebuild {
             println!("Full-rebuild files changed, regenerating all pages...");
         }
 
@@ -237,7 +238,7 @@ impl Website {
             let delete_path = self.output_path.join(slug);
             if let Err(e) = fs::remove_dir_all(&delete_path) {
                 eprintln!(
-                    "Error deleting directory {}:\n{e}",
+                    "Error deleting directory {}/:\n{e}",
                     delete_path.as_os_str().to_string_lossy()
                 );
                 continue;
@@ -259,11 +260,33 @@ impl Website {
             println!("WRITE {}", index_path.as_os_str().to_string_lossy());
         }
 
+        // Build 404 page
+        if full_rebuild {
+            self.bake_404()?;
+        }
+
         // Save new state file
         self.state_manager.write_state_file_and_commit()?;
 
         // load_syntax_theme("gruvbox (Light) (Hard)", &self.theme_path, &self.output_path)?;
 
+        Ok(())
+    }
+
+    fn bake_404(&self) -> Result<()> {
+        let rendered = match self.tera().render("404.html", &Context::new()) {
+            Ok(r) => r,
+            Err(e) => {
+                if matches!(e.kind, tera::ErrorKind::TemplateNotFound(_)) {
+                    eprintln!("Template '404.html' not found, consider adding one.");
+                    return Ok(());
+                }
+                return Err(e.into());
+            }
+        };
+        let path = self.output_path.join("404.html");
+        fs::write(&path, rendered)?;
+        println!("WRITE {}", path.display());
         Ok(())
     }
 }

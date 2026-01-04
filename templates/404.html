@@ -1,0 +1,21 @@
+{% extends "header.html" %}
+{% block url %}/404{% endblock url %}
+{% block style %}
+  <link rel="stylesheet" href="/style.css">
+{% endblock style %}
+{% block content -%}
+      <header>
+        <p id="title"><a href="..">{{ base__name }}</a>/404</p>
+      </header>
+
+      <div class="article">
+        <div class="head">
+          <h1>Page not found</h1>
+        </div>
+        <p>this file either doesn't exist, or once existed but was since renamed, moved, or deleted.</p>
+      </div>
+
+      <footer>
+        <a href="..">home</a>
+      </footer>
+{%- endblock content %}
