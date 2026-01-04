@@ -152,7 +152,13 @@ impl Website {
             // print!("READ {} ... ", path.as_os_str().to_string_lossy());
             // stdout().flush()?;
 
-            let file_contents = fs::read_to_string(&path)?;
+            let file_contents = match fs::read_to_string(&path) {
+                Ok(contents) => contents,
+                Err(e) => {
+                    eprintln!("Error reading {}:\n{e}", path.as_os_str().to_string_lossy());
+                    continue;
+                }
+            };
             let parsed_file: ParsedEntity = match yaml_matter().parse(&file_contents) {
                 Ok(pf) => pf,
                 Err(e) => {
@@ -195,6 +201,7 @@ impl Website {
                 continue;
             }
 
+            // Never errors with normal markdown
             let html_contents =
                 markdown::to_html_with_options(&parsed_file.content, &self.markdown_options)
                     .unwrap();
@@ -228,8 +235,14 @@ impl Website {
         // Delete stale files
         for slug in &self.state_manager.get_slugs_to_delete() {
             let delete_path = self.output_path.join(slug);
+            if let Err(e) = fs::remove_dir_all(&delete_path) {
+                eprintln!(
+                    "Error deleting directory {}:\n{e}",
+                    delete_path.as_os_str().to_string_lossy()
+                );
+                continue;
+            }
             println!("  DELETE {}/", delete_path.as_os_str().to_string_lossy());
-            fs::remove_dir_all(delete_path)?;
         }
 
         // Build home page (index).
