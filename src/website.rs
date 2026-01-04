@@ -153,13 +153,28 @@ impl Website {
             // stdout().flush()?;
 
             let file_contents = fs::read_to_string(&path)?;
-            let parsed_file: ParsedEntity = yaml_matter().parse(&file_contents)?;
+            let parsed_file: ParsedEntity = match yaml_matter().parse(&file_contents) {
+                Ok(pf) => pf,
+                Err(e) => {
+                    eprintln!("Error parsing {}:\n{e}", path.as_os_str().to_string_lossy());
+                    continue;
+                }
+            };
             let Some(front_matter_data) = parsed_file.data else {
                 // println!("skipped (no data)");
                 continue;
             };
 
-            let page_front_matter = front_matter_data.deserialize::<PageFrontMatter>()?;
+            let page_front_matter = match front_matter_data.deserialize::<PageFrontMatter>() {
+                Ok(fm) => fm,
+                Err(e) => {
+                    eprintln!(
+                        "Error parsing front matter in {}:\n{e}",
+                        path.as_os_str().to_string_lossy()
+                    );
+                    continue;
+                }
+            };
             if page_front_matter.draft() && !self.config.include_drafts {
                 // println!("skipped (draft)");
                 continue;
