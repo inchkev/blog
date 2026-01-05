@@ -1,3 +1,4 @@
+use std::ffi::OsString;
 use std::fs;
 use std::path::Path;
 use std::sync::LazyLock;
@@ -28,48 +29,40 @@ pub fn get_body_children_of_document(document: &NodeRef) -> Siblings {
     document.select_first("body").unwrap().as_node().children()
 }
 
-/// Copies images referenced in the document to the output directory and adds
-/// dimensions attributes to the image tags.
-///
-/// Returns a list of copied filenames.
-pub fn copy_images_and_add_dimensions<P: AsRef<Path>, Q: AsRef<Path>>(
+/// Adds width/height attributes to image tags
+pub fn add_dimensions_to_images<P: AsRef<Path>, Q: AsRef<Path>>(
     document: &NodeRef,
-    from_dir: P,
-    to_dir: Q,
-) -> Result<Vec<String>> {
-    let mut copied_files = Vec::new();
-
+    image_dir: P,
+    static_dir: Q,
+) {
     for img_tag in document.select("img").unwrap() {
-        let img_src = {
+        let src_str = {
             let attributes = img_tag.attributes.borrow();
-            let Some(img_src) = attributes.get("src").map(ToOwned::to_owned) else {
+            let Some(src_str) = attributes.get("src").map(ToOwned::to_owned) else {
                 continue;
             };
-            img_src
+            if src_str.is_empty() {
+                continue;
+            }
+            src_str
         };
-        if img_src.is_empty() {
+        let img_path = Path::new(&src_str);
+        let img_path = if img_path.is_absolute() {
+            static_dir
+                .as_ref()
+                .join(img_path.strip_prefix("/").unwrap())
+        } else {
+            image_dir.as_ref().join(img_path)
+        };
+        let Ok(img_canonical_path) = img_path.canonicalize() else {
             continue;
-        }
-
-        let img_path = from_dir.as_ref().join(&img_src);
-        let img_dest = to_dir.as_ref().join(&img_src);
-
-        fs::copy(&img_path, &img_dest)?;
-
-        let mut attributes = img_tag.attributes.borrow_mut();
-
-        // attributes.insert("srcset", img_src.to_owned());
-        // attributes.insert("sizes", img_src.to_owned());
-
-        // add image width/height attributes (prevents layout shifts)
-        if let Ok(img_dims) = get_image_dims(&img_path) {
+        };
+        if let Ok(img_dims) = get_image_dims(img_canonical_path) {
+            let mut attributes = img_tag.attributes.borrow_mut();
             attributes.insert("width", img_dims.width.to_string());
             attributes.insert("height", img_dims.height.to_string());
         }
-
-        copied_files.push(img_src);
     }
-    Ok(copied_files)
 }
 
 pub fn wrap_images_with_figure_tags(document: &NodeRef) {
@@ -111,6 +104,50 @@ pub fn wrap_images_with_figure_tags(document: &NodeRef) {
         figure.append(img_node.clone());
         figure.append(figcaption);
     }
+}
+
+/// Copies images with relative filepaths in the document to the output
+/// directory and updates the src attributes to use the new location.
+///
+/// Returns a list of copied filenames.
+pub fn copy_relative_path_images_and_update_image_src<P: AsRef<Path>, Q: AsRef<Path>>(
+    document: &NodeRef,
+    src_dir: P,
+    dest_dir: Q,
+) -> Result<Vec<OsString>> {
+    let mut copied_files = Vec::new();
+
+    for img_tag in document.select("img").unwrap() {
+        let src_str = {
+            let attributes = img_tag.attributes.borrow();
+            let Some(src_str) = attributes.get("src").map(ToOwned::to_owned) else {
+                continue;
+            };
+            if src_str.is_empty() {
+                continue;
+            }
+            src_str
+        };
+        let img_src_path = Path::new(&src_str);
+        if img_src_path.is_absolute() {
+            continue;
+        }
+        let Some(img_src_file_name) = img_src_path.file_name() else {
+            continue;
+        };
+        let Ok(img_canonical_path) = src_dir.as_ref().join(img_src_path).canonicalize() else {
+            continue;
+        };
+
+        let img_dest = dest_dir.as_ref().join(img_src_file_name);
+        fs::copy(&img_canonical_path, &img_dest)?;
+        {
+            let mut attributes = img_tag.attributes.borrow_mut();
+            attributes.insert("src", img_src_file_name.to_string_lossy().into());
+        }
+        copied_files.push(img_src_file_name.to_os_string());
+    }
+    Ok(copied_files)
 }
 
 pub fn has_code_blocks(document: &NodeRef) -> bool {

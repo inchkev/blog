@@ -42,7 +42,6 @@ fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
 fn create_tera<P: AsRef<Path>>(template_path: P) -> Tera {
     let mut tera = Tera::new(&template_path.as_ref().join("*.html").to_string_lossy())
         .unwrap_or_else(|e| panic!("{e}"));
-    // TODO: why did I set this?
     tera.autoescape_on(vec![]);
     // TODO: register custom filters.
     // See https://keats.github.io/tera/docs/#built-in-filters
@@ -87,11 +86,12 @@ fn markdown_to_body_html(markdown: &str, options: &markdown::Options) -> (String
 /// - updates references section
 ///
 /// Returns (processed_html, copied_images).
-fn postprocess_html<P: AsRef<Path>>(
+fn postprocess_html<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     html: String,
-    content_dir: P,
     page_dir: P,
-) -> Result<(String, Vec<String>)> {
+    content_dir: Q,
+    static_dir: R,
+) -> Result<(String, Vec<OsString>)> {
     // Find body content boundaries to avoid parsing the full document
     // Exclude leading/trailing whitespace from parsing since kuchikiki/html5ever
     //drops them
@@ -109,9 +109,11 @@ fn postprocess_html<P: AsRef<Path>>(
 
     // Parse the body
     let body_content = kuchikiki::parse_html().one(&html[start..end]);
-    let copied_images = html::copy_images_and_add_dimensions(&body_content, content_dir, page_dir)?;
+    html::add_dimensions_to_images(&body_content, &content_dir, static_dir);
     // TODO: this should really be done around markdown parsing time instead
     html::wrap_images_with_figure_tags(&body_content);
+    let copied_images =
+        html::copy_relative_path_images_and_update_image_src(&body_content, content_dir, page_dir)?;
     html::update_references_section(&body_content);
 
     // Re-serialize the body
@@ -120,10 +122,8 @@ fn postprocess_html<P: AsRef<Path>>(
         .collect();
 
     // Re-join
-    Ok((
-        format!("{}{}{}", &html[..start], new_body, &html[end..]),
-        copied_images,
-    ))
+    let rejoined_html = format!("{}{}{}", &html[..start], new_body, &html[end..]);
+    Ok((rejoined_html, copied_images))
 }
 
 pub struct Website {
@@ -304,14 +304,18 @@ impl Website {
             // 3. Render ("bake") the HTML contents into a full-formed page.
             let rendered_page = page.parbake(self.tera())?;
             // 4. Perform some post-processing on the HTML page.
-            let (rendered_page, copied_images) =
-                match postprocess_html(rendered_page, &self.content_path, &page_dir) {
-                    Ok(result) => result,
-                    Err(e) => {
-                        eprintln!("Error postprocessing {}:\n{e}", page.slug());
-                        continue;
-                    }
-                };
+            let (rendered_page, copied_images) = match postprocess_html(
+                rendered_page,
+                &page_dir,
+                &self.content_path,
+                &self.static_path,
+            ) {
+                Ok(result) => result,
+                Err(e) => {
+                    eprintln!("Error postprocessing {}:\n{e}", page.slug());
+                    continue;
+                }
+            };
             // 4. Create the index.html file!
             let output_path = page_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
@@ -320,9 +324,7 @@ impl Website {
             println!("  WRITE {}", output_path.as_os_str().to_string_lossy());
 
             // Delete leftover (stale) files in the page directory.
-            let copied_set: HashSet<OsString> =
-                copied_images.into_iter().map(OsString::from).collect();
-            for stale_file in existing_files.difference(&copied_set) {
+            for stale_file in existing_files.difference(&copied_images.into_iter().collect()) {
                 let stale_path = page_dir.join(stale_file);
                 if let Err(e) = fs::remove_file(&stale_path) {
                     eprintln!("Error deleting stale file {}:\n{e}", stale_path.display());
@@ -353,8 +355,12 @@ impl Website {
         self.state_manager.set_index_checksum(index_checksum);
         if self.state_manager.should_rebuild_index() {
             let rendered_index = page_bundle.parbake(self.tera())?;
-            let (rendered_index, _) =
-                postprocess_html(rendered_index, &self.content_path, &self.output_path)?;
+            let (rendered_index, _) = postprocess_html(
+                rendered_index,
+                &self.output_path,
+                &self.content_path,
+                &self.static_path,
+            )?;
 
             let index_path = self.output_path.join("index.html");
             let mut index_file = File::create(&index_path)?;
