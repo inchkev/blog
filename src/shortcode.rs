@@ -48,9 +48,8 @@ impl ShortcodeManager {
         }
 
         let mut tera = Tera::default();
-        // tera.autoescape_on(vec![]); // DEBUG: commented out to test escaping
-
         let mut shortcode_names = Vec::new();
+
         for path in shortcode_paths {
             let content = match fs::read_to_string(&path) {
                 Ok(content) => content,
