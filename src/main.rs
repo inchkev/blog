@@ -7,13 +7,14 @@ mod config;
 mod html;
 mod page;
 mod page_bundle;
+mod shortcode;
 mod state;
 mod website;
 
 use website::Website;
 
 /// File patterns that trigger a full site rebuild when any matching file changes.
-pub static FULL_REBUILD_GLOBS: &[&str] = &["templates/*.html", "src/*.rs"];
+pub static FULL_REBUILD_GLOBS: &[&str] = &["templates/**/*.html", "src/*.rs"];
 
 fn main() -> Result<()> {
     let start = Instant::now();

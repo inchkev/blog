@@ -20,6 +20,7 @@ use crate::config::Config;
 use crate::html;
 use crate::page::{Page, PageFrontMatter};
 use crate::page_bundle::PageBundle;
+use crate::shortcode::ShortcodeManager;
 use crate::state::StateManager;
 use crate::FULL_REBUILD_GLOBS;
 
@@ -40,7 +41,10 @@ fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
 fn create_tera<P: AsRef<Path>>(template_path: P) -> Tera {
     let mut tera = Tera::new(&template_path.as_ref().join("*.html").to_string_lossy())
         .unwrap_or_else(|e| panic!("{e}"));
+    // TODO: why did I set this?
     tera.autoescape_on(vec![]);
+    // TODO: register custom filters.
+    // See https://keats.github.io/tera/docs/#built-in-filters
     tera
 }
 
@@ -68,6 +72,7 @@ fn markdown_to_body_html(markdown: &str, options: &markdown::Options) -> (String
     if has_code_blocks {
         html::syntax_highlight_code_blocks(&html_document);
     }
+
     // Get just what's inside the <body> tag
     let body_content = html::get_body_children_of_document(&html_document)
         .map(|nr| nr.to_string())
@@ -130,6 +135,7 @@ pub struct Website {
     theme_path: PathBuf,
     config: Config,
     state_manager: StateManager,
+    shortcode_manager: OnceCell<ShortcodeManager>,
     markdown_options: markdown::Options,
     tera: OnceCell<Tera>,
 }
@@ -153,7 +159,7 @@ impl Website {
                 allow_dangerous_protocol: true,
                 gfm_footnote_label: Some("References".into()),
                 gfm_footnote_back_label: Some("Jump up".into()),
-                ..CompileOptions::gfm()
+                ..CompileOptions::default()
             },
         };
 
@@ -165,6 +171,7 @@ impl Website {
             theme_path,
             config,
             state_manager,
+            shortcode_manager: OnceCell::new(),
             markdown_options,
             tera: OnceCell::new(),
         })
@@ -172,6 +179,11 @@ impl Website {
 
     fn tera(&self) -> &Tera {
         self.tera.get_or_init(|| create_tera(&self.template_path))
+    }
+
+    fn shortcode_manager(&self) -> &ShortcodeManager {
+        self.shortcode_manager
+            .get_or_init(|| ShortcodeManager::new(&self.template_path))
     }
 
     pub fn bake(&mut self) -> Result<()> {
@@ -190,11 +202,12 @@ impl Website {
         }
 
         // Collect markdown files and sort by creation time (newest first)
-        let mut content_paths: Vec<_> = glob(&format!("{}/*.md", self.content_path.display()))
-            .into_iter()
-            .flatten()
-            .filter_map(std::result::Result::ok)
-            .collect();
+        let mut content_paths: Vec<_> =
+            glob(self.content_path.join("*.md").to_string_lossy().as_ref())
+                .unwrap()
+                .into_iter()
+                .filter_map(std::result::Result::ok)
+                .collect();
         content_paths.sort_by_key(|p| Reverse(p.metadata().ok().and_then(|m| m.created().ok())));
 
         for path in content_paths {
@@ -265,14 +278,28 @@ impl Website {
                 }
             };
 
-            // Convert markdown to body HTML. The `markdown-rs` crate returns
-            // a full HTML page, but we only want its body to then be passed
-            // to Tera.
+            // Markdown -> HTML pipeline:
+            let markdown = parsed_file.content;
+            // 1. Process shortcodes in markdown.
+            let Ok(markdown) = self.shortcode_manager().render_shortcodes(markdown) else {
+                eprintln!(
+                    "Error rendering shortcodes in {}",
+                    path.as_os_str().to_string_lossy()
+                );
+                self.state_manager.unset_checksum(&page_slug);
+                continue;
+            };
+            // 2. Convert processed markdown to HTML. Because `markdown-rs`
+            // outputs a full HTML page, we grab only its <body> content before
+            // passing it to Tera.
             let (body_contents, has_code_blocks) =
-                markdown_to_body_html(&parsed_file.content, &self.markdown_options);
+                markdown_to_body_html(&markdown, &self.markdown_options);
+            // Set some page metadata.
             page.set_content(body_contents)
                 .set_has_code_block(has_code_blocks);
+            // 3. Render ("bake") the HTML contents into a full-formed page.
             let rendered_page = page.parbake(self.tera())?;
+            // 4. Perform some post-processing on the HTML page.
             let (rendered_page, copied_images) =
                 match postprocess_html(rendered_page, &self.content_path, &page_dir) {
                     Ok(result) => result,
@@ -281,8 +308,7 @@ impl Website {
                         continue;
                     }
                 };
-
-            // Create the page's index.html.
+            // 4. Create the index.html file!
             let output_path = page_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
             output_file.write_all(rendered_page.as_bytes())?;

@@ -230,7 +230,7 @@ pre code {
 table {
   border-collapse: collapse;
 }
-thead {
+th {
   background-color: var(--bg-accent);
 }
 table th, table td {

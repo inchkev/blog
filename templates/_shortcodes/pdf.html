@@ -1,0 +1,4 @@
+{% set frame_style = "width: 100%; height: 100%;" %}
+<div{% if class %} class="{{ class }}"{% endif %}{% if style %} style="{{ style }}"{% endif %}>
+  <object data="{{ src }}" type="application/pdf" style="{{ frame_style }}"></object>
+</div>

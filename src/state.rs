@@ -67,6 +67,10 @@ impl StateManager {
         _ = self.article_map_next.insert(slug, checksum);
     }
 
+    pub fn unset_checksum(&mut self, slug: &str) {
+        _ = self.article_map_next.remove(slug);
+    }
+
     /// Returns whether or not the article should be rebuilt, when:
     /// - A full rebuild is required, OR
     /// - The article is new (not in previous state), OR

@@ -1,0 +1,10 @@
+{% set controls = controls | default(value=true) %}
+{% set title = title | default(value="YouTube video player") %}
+{% set params = "" %}
+{% if controls == false %}
+  {% set params = "?controls=0" %}
+{% endif %}
+{% set iframe_style = "width: 100%; height: 100%;" %}
+<div{% if class %} class="{{ class }}"{% endif %}{% if style %} style="{{ style }}"{% endif %}>
+  <iframe src="https://www.youtube.com/embed/{{ id }}{{ params }}" style="{{ iframe_style }}" title="{{ title }}" frameborder="0" allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" referrerpolicy="strict-origin-when-cross-origin" allowfullscreen></iframe>
+</div>
