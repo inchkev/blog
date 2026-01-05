@@ -27,8 +27,9 @@ use crate::FULL_REBUILD_GLOBS;
 // Default directory/file names
 const CONTENT_DIR: &str = "content";
 const TEMPLATE_DIR: &str = "templates";
-const THEME_DIR: &str = "themes";
+const STATIC_DIR: &str = "static";
 const OUTPUT_DIR: &str = "website";
+const THEME_DIR: &str = "themes";
 const STATE_FILE: &str = "state.json";
 
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
@@ -130,6 +131,7 @@ pub struct Website {
     base_path: PathBuf,
     content_path: PathBuf,
     template_path: PathBuf,
+    static_path: PathBuf,
     output_path: PathBuf,
     #[allow(dead_code)]
     theme_path: PathBuf,
@@ -146,6 +148,7 @@ impl Website {
         let state_path = base_path.join(STATE_FILE);
         let content_path = base_path.join(CONTENT_DIR);
         let template_path = base_path.join(TEMPLATE_DIR);
+        let static_path = base_path.join(STATIC_DIR);
         let output_path = base_path.join(OUTPUT_DIR);
         let theme_path = base_path.join(THEME_DIR);
 
@@ -167,6 +170,7 @@ impl Website {
             base_path,
             content_path,
             template_path,
+            static_path,
             output_path,
             theme_path,
             config,
@@ -359,9 +363,12 @@ impl Website {
             println!("WRITE {}", index_path.as_os_str().to_string_lossy());
         }
 
-        // Build 404 page
         if full_rebuild {
+            // Build 404 page
             self.bake_404()?;
+
+            // Copy files in static directory
+            self.copy_static_files()?;
         }
 
         // Save new state file
@@ -386,6 +393,88 @@ impl Website {
         let path = self.output_path.join("404.html");
         fs::write(&path, rendered)?;
         println!("WRITE {}", path.display());
+        Ok(())
+    }
+
+    /// Copies files from the static directory to the output directory.
+    ///
+    /// - Preserves directory structure
+    /// - Only copies directories and regular files
+    /// - Overwrites existing files
+    /// - Continues on individual file errors
+    fn copy_static_files(&self) -> Result<()> {
+        if !self.static_path.exists() {
+            return Ok(());
+        }
+        let Ok(metadata) = fs::symlink_metadata(&self.static_path) else {
+            return Ok(());
+        };
+        if !metadata.is_dir() {
+            return Ok(());
+        }
+        Self::_copy_static_dir_recursive(&self.static_path, &self.output_path)
+    }
+
+    /// Recursively copies contents of `src` directory to `dest` directory.
+    fn _copy_static_dir_recursive(src: &Path, dest: &Path) -> Result<()> {
+        let entries = match fs::read_dir(src) {
+            Ok(e) => e,
+            Err(e) => {
+                eprintln!("cannot read directory {}: {e}", src.display());
+                return Ok(());
+            }
+        };
+
+        for entry in entries {
+            let entry = match entry {
+                Ok(e) => e,
+                Err(e) => {
+                    eprintln!("cannot read direntry {}: {e}", src.display());
+                    continue;
+                }
+            };
+            let entry_path = entry.path();
+            let file_type = match entry.file_type() {
+                Ok(m) => m,
+                Err(e) => {
+                    eprintln!("cannot get file type {}: {e}", entry_path.display());
+                    continue;
+                }
+            };
+
+            // don't copy symlinks
+            if file_type.is_symlink() {
+                eprintln!("skipping symlink: {}", entry_path.display());
+                continue;
+            }
+
+            let dest_path = dest.join(entry.file_name());
+            if file_type.is_file() {
+                // Copy regular file (overwrites existing)
+                match fs::copy(&entry_path, &dest_path) {
+                    Ok(_) => {
+                        println!("COPY {}", dest_path.display());
+                    }
+                    Err(e) => {
+                        eprintln!(
+                            "cannot copy {} to {}: {e}",
+                            entry_path.display(),
+                            dest_path.display()
+                        );
+                    }
+                }
+            } else if file_type.is_dir() {
+                // Create destination directory if needed
+                if let Err(e) = fs::create_dir_all(&dest_path) {
+                    eprintln!("Cannot create directory {}: {e}", dest_path.display());
+                    continue;
+                }
+                println!("COPY {}/", dest_path.display());
+                // Recurse into subdirectory
+                Self::_copy_static_dir_recursive(&entry_path, &dest_path)?;
+            }
+        }
+
         Ok(())
     }
 }
