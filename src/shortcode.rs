@@ -54,7 +54,7 @@ impl ShortcodeManager {
             let content = match fs::read_to_string(&path) {
                 Ok(content) => content,
                 Err(e) => {
-                    eprintln!("Error reading shortcode template {}: {}", path.display(), e);
+                    eprintln!("cannot read shortcode template {}: {}", path.display(), e);
                     continue;
                 }
             };
@@ -68,7 +68,7 @@ impl ShortcodeManager {
             shortcode_names.push(name.to_string());
         }
 
-        println!("Registered shortcodes: {}", shortcode_names.join(", "));
+        println!("Shortcodes: {}", shortcode_names.join(", "));
 
         ShortcodeManager {
             tera: Some(RefCell::new(tera)),

@@ -196,12 +196,20 @@ impl Website {
 
         let mut page_bundle = PageBundle::default();
 
-        // Get checksum for files that can trigger a full rebuild
-        let full_rebuild_checksum = Checksum::from_globs_par(FULL_REBUILD_GLOBS);
-        let full_rebuild = self
+        // Check if any files that can trigger a full rebuild have changed
+        let full_rebuild_paths: Vec<PathBuf> = FULL_REBUILD_GLOBS
+            .iter()
+            .flat_map(|pattern| {
+                glob(pattern.as_ref())
+                    .into_iter()
+                    .flatten()
+                    .filter_map(|p| p.ok().filter(|p| p.is_file()))
+            })
+            .collect();
+        let should_full_rebuild = self
             .state_manager
-            .set_full_rebuild_checksum(full_rebuild_checksum);
-        if full_rebuild {
+            .fast_set_next_bulk_and_check_if_changed(full_rebuild_paths)?;
+        if should_full_rebuild {
             println!("Full-rebuild files changed, regenerating all pages...");
         }
 
@@ -218,14 +226,14 @@ impl Website {
             let file_contents = match fs::read_to_string(&path) {
                 Ok(contents) => contents,
                 Err(e) => {
-                    eprintln!("Error reading {}:\n{e}", path.as_os_str().to_string_lossy());
+                    eprintln!("cannot read {}:\n{e}", path.as_os_str().to_string_lossy());
                     continue;
                 }
             };
             let parsed_file: ParsedEntity = match yaml_matter().parse(&file_contents) {
                 Ok(pf) => pf,
                 Err(e) => {
-                    eprintln!("Error parsing {}:\n{e}", path.as_os_str().to_string_lossy());
+                    eprintln!("cannot parse {}:\n{e}", path.as_os_str().to_string_lossy());
                     continue;
                 }
             };
@@ -238,7 +246,7 @@ impl Website {
                 Ok(fm) => fm,
                 Err(e) => {
                     eprintln!(
-                        "Error parsing front matter in {}:\n{e}",
+                        "cannot parse front matter in {}:\n{e}",
                         path.as_os_str().to_string_lossy()
                     );
                     continue;
@@ -277,7 +285,7 @@ impl Website {
                     HashSet::new()
                 }
                 Err(e) => {
-                    eprintln!("Error reading page directory {}:\n{e}", page_dir.display());
+                    eprintln!("cannot read page directory {}:\n{e}", page_dir.display());
                     continue;
                 }
             };
@@ -287,7 +295,7 @@ impl Website {
             // 1. Process shortcodes in markdown.
             let Ok(markdown) = self.shortcode_manager().render_shortcodes(markdown) else {
                 eprintln!(
-                    "Error rendering shortcodes in {}",
+                    "cannot render shortcodes in {}",
                     path.as_os_str().to_string_lossy()
                 );
                 self.state_manager.unset_checksum(&page_slug);
@@ -312,7 +320,7 @@ impl Website {
             ) {
                 Ok(result) => result,
                 Err(e) => {
-                    eprintln!("Error postprocessing {}:\n{e}", page.slug());
+                    eprintln!("cannot postprocess {}:\n{e}", page.slug());
                     continue;
                 }
             };
@@ -327,7 +335,7 @@ impl Website {
             for stale_file in existing_files.difference(&copied_images.into_iter().collect()) {
                 let stale_path = page_dir.join(stale_file);
                 if let Err(e) = fs::remove_file(&stale_path) {
-                    eprintln!("Error deleting stale file {}:\n{e}", stale_path.display());
+                    eprintln!("cannot delete stale file {}:\n{e}", stale_path.display());
                 } else {
                     println!("  DELETE {}", stale_path.display());
                 }
@@ -341,7 +349,7 @@ impl Website {
             let delete_path = self.output_path.join(slug);
             if let Err(e) = fs::remove_dir_all(&delete_path) {
                 eprintln!(
-                    "Error deleting directory {}/:\n{e}",
+                    "cannot delete dir {}/:\n{e}",
                     delete_path.as_os_str().to_string_lossy()
                 );
                 continue;
@@ -369,13 +377,13 @@ impl Website {
             println!("WRITE {}", index_path.as_os_str().to_string_lossy());
         }
 
-        if full_rebuild {
+        if should_full_rebuild {
             // Build 404 page
             self.bake_404()?;
-
-            // Copy files in static directory
-            self.copy_static_files()?;
         }
+
+        // Copy files in static directory
+        self.copy_static_files()?;
 
         // Save new state file
         self.state_manager.write_state_file_and_commit()?;
@@ -390,7 +398,7 @@ impl Website {
             Ok(r) => r,
             Err(e) => {
                 if matches!(e.kind, tera::ErrorKind::TemplateNotFound(_)) {
-                    eprintln!("Template '404.html' not found, consider adding one.");
+                    println!("cannot find template '404.html', consider adding one");
                     return Ok(());
                 }
                 return Err(e.into());
@@ -404,11 +412,15 @@ impl Website {
 
     /// Copies files from the static directory to the output directory.
     ///
-    /// - Preserves directory structure
-    /// - Only copies directories and regular files
-    /// - Overwrites existing files
-    /// - Continues on individual file errors
-    fn copy_static_files(&self) -> Result<()> {
+    /// - preserves directory structure
+    /// - only copies directories and regular files
+    /// - only copies files that have changed
+    /// - overwrites existing files
+    /// - continues on individual file errors
+    /// - deletes stale static files
+    ///
+    /// TODO: delete stale directories
+    fn copy_static_files(&mut self) -> Result<()> {
         if !self.static_path.exists() {
             return Ok(());
         }
@@ -418,15 +430,32 @@ impl Website {
         if !metadata.is_dir() {
             return Ok(());
         }
-        Self::_copy_static_dir_recursive(&self.static_path, &self.output_path)
+        let output_path = self.output_path.clone();
+        self._copy_static_dir_recursive(Path::new(""), &output_path)?;
+
+        // delete stale static files
+        for stale_file in self.state_manager.get_stale_static_files() {
+            let stale_path = output_path.join(stale_file);
+            if let Err(e) = fs::remove_file(&stale_path) {
+                eprintln!("cannot delete stale file {}:\n{e}", stale_path.display());
+            } else {
+                println!("DELETE {} (static)", stale_path.display());
+            }
+        }
+        Ok(())
     }
 
     /// Recursively copies contents of `src` directory to `dest` directory.
-    fn _copy_static_dir_recursive(src: &Path, dest: &Path) -> Result<()> {
-        let entries = match fs::read_dir(src) {
+    ///
+    /// - `root_path`: root static directory to copy from
+    /// - `relative_path`: source path, relative to `static_dir`
+    /// - `dest`: destination directory to copy to
+    fn _copy_static_dir_recursive(&mut self, src_relative_path: &Path, dest: &Path) -> Result<()> {
+        let dir_path = self.static_path.join(src_relative_path);
+        let entries = match fs::read_dir(&dir_path) {
             Ok(e) => e,
             Err(e) => {
-                eprintln!("cannot read directory {}: {e}", src.display());
+                eprintln!("cannot read dir {}: {e}", dir_path.display());
                 return Ok(());
             }
         };
@@ -435,7 +464,7 @@ impl Website {
             let entry = match entry {
                 Ok(e) => e,
                 Err(e) => {
-                    eprintln!("cannot read direntry {}: {e}", src.display());
+                    eprintln!("cannot read direntry in {}: {e}", dir_path.display());
                     continue;
                 }
             };
@@ -443,7 +472,7 @@ impl Website {
             let file_type = match entry.file_type() {
                 Ok(m) => m,
                 Err(e) => {
-                    eprintln!("cannot get file type {}: {e}", entry_path.display());
+                    eprintln!("cannot get filetype of {}: {e}", entry_path.display());
                     continue;
                 }
             };
@@ -454,9 +483,22 @@ impl Website {
                 continue;
             }
 
-            let dest_path = dest.join(entry.file_name());
+            let entry_file_name = entry.file_name();
+            let dest_path = dest.join(&entry_file_name);
+
+            let entry_relative_path = src_relative_path.join(entry_file_name);
+
             if file_type.is_file() {
                 // Copy regular file (overwrites existing)
+                let has_changed = self
+                    .state_manager
+                    .fast_set_next_static_file_state_and_check_if_changed(
+                        &entry_path,
+                        entry_relative_path,
+                    )?;
+                if !has_changed {
+                    continue;
+                }
                 match fs::copy(&entry_path, &dest_path) {
                     Ok(_) => {
                         println!("COPY {}", dest_path.display());
@@ -472,12 +514,12 @@ impl Website {
             } else if file_type.is_dir() {
                 // Create destination directory if needed
                 if let Err(e) = fs::create_dir_all(&dest_path) {
-                    eprintln!("Cannot create directory {}: {e}", dest_path.display());
+                    eprintln!("cannot create dir {}: {e}", dest_path.display());
                     continue;
                 }
                 println!("COPY {}/", dest_path.display());
                 // Recurse into subdirectory
-                Self::_copy_static_dir_recursive(&entry_path, &dest_path)?;
+                self._copy_static_dir_recursive(&entry_relative_path, &dest_path)?;
             }
         }
 

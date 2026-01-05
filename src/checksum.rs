@@ -1,7 +1,9 @@
 use std::fmt;
-use std::fs;
-use std::path::PathBuf;
+use std::fs::{self, File};
+use std::io::{self, BufReader};
+use std::path::{Path, PathBuf};
 
+use anyhow::Result;
 use base64::engine::general_purpose;
 use base64::Engine as _;
 use glob::glob;
@@ -13,7 +15,7 @@ use sha2::{Digest, Sha256};
 const BASE64_SHA256_LEN: usize = 44;
 
 /// A SHA-256 checksum encoded as base64.
-#[derive(Clone, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct Checksum([u8; BASE64_SHA256_LEN]);
 
 impl Checksum {
@@ -34,36 +36,19 @@ impl Checksum {
         Self::from_sha256(&hash)
     }
 
-    /// Generate a single [`Checksum`] for paths from `patterns`.
-    #[allow(dead_code)]
-    pub fn from_globs<S: AsRef<str> + Ord>(patterns: &[S]) -> Self {
+    pub fn from_file<P: AsRef<Path>>(path: P) -> Result<Self> {
+        let file = File::open(path)?;
+        let mut reader = BufReader::new(file);
         let mut hasher = Sha256::new();
-
-        let mut sorted_patterns: Vec<_> = patterns.iter().collect();
-        sorted_patterns.sort();
-
-        for pattern in sorted_patterns {
-            let mut paths: Vec<_> = glob(pattern.as_ref())
-                .into_iter()
-                .flatten()
-                .filter_map(|p| p.ok().filter(|p| p.is_file()))
-                .collect();
-            paths.sort();
-
-            for path in paths {
-                if let Ok(contents) = fs::read(&path) {
-                    hasher.update(&contents);
-                }
-            }
-        }
-
+        io::copy(&mut reader, &mut hasher)?;
         let hash = hasher.finalize();
-        Self::from_sha256(&hash)
+        Ok(Self::from_sha256(&hash))
     }
 
     /// Generate a single [`Checksum`] for paths from `patterns`.
     ///
     /// Hashes files in parallel.
+    #[allow(dead_code)]
     pub fn from_globs_par<S: AsRef<str> + Ord + Sync>(patterns: &[S]) -> Self {
         let mut sorted_patterns: Vec<_> = patterns.iter().collect();
         sorted_patterns.sort();
@@ -110,12 +95,6 @@ impl fmt::Debug for Checksum {
     }
 }
 
-impl fmt::Display for Checksum {
-    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str(self.as_str())
-    }
-}
-
 impl Serialize for Checksum {
     fn serialize<S: Serializer>(&self, serializer: S) -> Result<S::Ok, S::Error> {
         serializer.serialize_str(self.as_str())
@@ -151,40 +130,20 @@ mod tests {
 
     use super::*;
 
-    #[test]
-    fn bench_from_globs() {
-        let patterns = ["src/*", "content/*", "templates/*"];
-        let iterations = 1_000;
-
-        // Warmup
-        for _ in 0..10 {
-            std::hint::black_box(Checksum::from_globs(&patterns));
-        }
-
-        let start = Instant::now();
-        for _ in 0..iterations {
-            std::hint::black_box(Checksum::from_globs(&patterns));
-        }
-        let elapsed = start.elapsed();
-        println!(
-            "\nfrom_globs: {iterations} iterations took {elapsed:?} ({:?}/iter)",
-            elapsed / iterations
-        );
-    }
+    const PATTERNS: &[&str] = &["src/*", "content/*", "templates/**/*"];
 
     #[test]
     fn bench_from_globs_par() {
-        let patterns = ["src/*", "content/*", "templates/*"];
         let iterations = 1_000;
 
         // Warmup
         for _ in 0..10 {
-            std::hint::black_box(Checksum::from_globs_par(&patterns));
+            std::hint::black_box(Checksum::from_globs_par(PATTERNS));
         }
 
         let start = Instant::now();
         for _ in 0..iterations {
-            std::hint::black_box(Checksum::from_globs_par(&patterns));
+            std::hint::black_box(Checksum::from_globs_par(PATTERNS));
         }
         let elapsed = start.elapsed();
         println!(
