@@ -140,7 +140,7 @@ impl StateManager {
             return Ok(());
         }
 
-        let articles: Vec<Article> = self
+        let mut articles: Vec<Article> = self
             .article_map_next
             .iter()
             .map(|(slug, checksum)| Article {
@@ -148,6 +148,7 @@ impl StateManager {
                 checksum: checksum.clone(),
             })
             .collect();
+        articles.sort_by(|a, b| a.slug.cmp(&b.slug));
         let state_file = StateFile {
             articles,
             full_rebuild_checksum: self.full_rebuild_checksum_next.clone(),
