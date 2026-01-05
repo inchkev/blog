@@ -14,7 +14,6 @@ static SHORTCODE_REGEX: LazyLock<Regex> =
 const SHORTCODE_DIR: &str = "_shortcodes";
 
 struct Shortcode {
-    // tera template
     template: String,
 }
 
@@ -29,12 +28,6 @@ impl tera::Function for Shortcode {
         Ok(tera::Value::String(html))
     }
 }
-
-// todo:
-// 1. new tera context in _shortcodes
-// 2. register new functions, for each function, body passes into respective
-//    named tera _shortcode function
-// for each md, run this
 
 pub struct ShortcodeManager {
     tera: Option<RefCell<Tera>>,
