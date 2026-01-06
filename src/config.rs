@@ -9,6 +9,7 @@ use serde::Deserialize;
 pub struct Config {
     pub minify_css: bool,
     pub include_drafts: bool,
+    pub pretty_print_state_cache: bool,
 }
 
 impl Config {

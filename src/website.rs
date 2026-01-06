@@ -386,7 +386,12 @@ impl Website {
         self.copy_static_files()?;
 
         // Save new state file
-        self.state_manager.write_state_file_and_commit()?;
+        println!(
+            "pretty print state cache: {}",
+            self.config.pretty_print_state_cache
+        );
+        self.state_manager
+            .write_state_file_and_commit(self.config.pretty_print_state_cache)?;
 
         // load_syntax_theme("gruvbox (Light) (Hard)", &self.theme_path, &self.output_path)?;
 
@@ -417,9 +422,7 @@ impl Website {
     /// - only copies files that have changed
     /// - overwrites existing files
     /// - continues on individual file errors
-    /// - deletes stale static files
-    ///
-    /// TODO: delete stale directories
+    /// - deletes stale files (deleted) and directories (empty)
     fn copy_static_files(&mut self) -> Result<()> {
         if !self.static_path.exists() {
             return Ok(());
@@ -434,14 +437,26 @@ impl Website {
         self._copy_static_dir_recursive(Path::new(""), &output_path)?;
 
         // delete stale static files
-        for stale_file in self.state_manager.get_stale_static_files() {
+        let stale_files = self
+            .state_manager
+            .get_stale_static_files_in_order_of_deletion();
+        for (stale_file, is_file) in stale_files {
             let stale_path = output_path.join(stale_file);
-            if let Err(e) = fs::remove_file(&stale_path) {
-                eprintln!("cannot delete stale file {}:\n{e}", stale_path.display());
+            if is_file {
+                if let Err(e) = fs::remove_file(&stale_path) {
+                    eprintln!("cannot delete stale file {}:\n{e}", stale_file.display());
+                } else {
+                    println!("DELETE [static file] {}", stale_file.display());
+                }
             } else {
-                println!("DELETE {} (static)", stale_path.display());
+                // empty directory (unless theres a page with the same name)
+                // try to delete the directory
+                if fs::remove_dir(&stale_path).is_ok() {
+                    println!("DELETE [static dir ] {}/", stale_file.display());
+                }
             }
         }
+
         Ok(())
     }
 
@@ -501,7 +516,7 @@ impl Website {
                 }
                 match fs::copy(&entry_path, &dest_path) {
                     Ok(_) => {
-                        println!("COPY {}", dest_path.display());
+                        println!("COPY [static file] {}", dest_path.display());
                     }
                     Err(e) => {
                         eprintln!(
@@ -513,11 +528,23 @@ impl Website {
                 }
             } else if file_type.is_dir() {
                 // Create destination directory if needed
-                if let Err(e) = fs::create_dir_all(&dest_path) {
-                    eprintln!("cannot create dir {}: {e}", dest_path.display());
-                    continue;
+                let does_not_exist = self
+                    .state_manager
+                    .fast_set_next_static_file_state_and_check_if_changed(
+                        &entry_path,
+                        entry_relative_path.clone(),
+                    )?;
+                if does_not_exist {
+                    // NOTE: a directory could be marked as removed according
+                    // to its updated state in the static map, but it could
+                    // still correctly exist if there was a page with the same
+                    // name that created that directory.
+                    println!("COPY [static dir ] {}/", dest_path.display());
+                    if let Err(e) = fs::create_dir_all(&dest_path) {
+                        eprintln!("cannot create dir {}: {e}", dest_path.display());
+                        continue;
+                    }
                 }
-                println!("COPY {}/", dest_path.display());
                 // Recurse into subdirectory
                 self._copy_static_dir_recursive(&entry_relative_path, &dest_path)?;
             }

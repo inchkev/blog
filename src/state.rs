@@ -1,13 +1,12 @@
+use std::cmp::Reverse;
 use std::collections::{HashMap, HashSet};
 use std::fs;
 use std::path::{Path, PathBuf};
 use std::time::UNIX_EPOCH;
 
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use rayon::prelude::*;
-use serde::de::{self, SeqAccess, Visitor};
-use serde::ser::SerializeTuple;
-use serde::{Deserialize, Deserializer, Serialize, Serializer};
+use serde::{Deserialize, Serialize};
 use serde_with::{serde_as, DefaultOnError};
 
 use crate::checksum::Checksum;
@@ -168,14 +167,23 @@ impl StateManager {
         Ok(has_changed)
     }
 
-    pub fn get_stale_static_files(&self) -> Vec<&PathBuf> {
+    /// Returns (path, is_file) tuples in descending path depth order, i.e.
+    /// the order that they can safely be deleted.
+    pub fn get_stale_static_files_in_order_of_deletion(&self) -> Vec<(&PathBuf, bool)> {
         if self.curr.static_map.is_empty() {
             return vec![];
         }
         let map_keys: HashSet<_> = self.curr.static_map.keys().collect();
         let changed_keys: HashSet<_> = self.next.static_map.keys().collect();
         // Slugs in the old state but not in the current run = deleted pages
-        map_keys.difference(&changed_keys).copied().collect()
+        let mut stale_files = map_keys
+            .difference(&changed_keys)
+            .into_iter()
+            .map(|&k| (k, self.curr.static_map.get(k).unwrap().is_file()))
+            .collect::<Vec<_>>();
+        // Sort by path depth, deepest first
+        stale_files.sort_by_key(|(path, _is_file)| Reverse(path.components().count()));
+        stale_files
     }
 
     #[allow(dead_code)]
@@ -220,12 +228,12 @@ impl StateManager {
     /// Write to state file and commit changes.
     ///
     /// Skips writing if nothing changed.
-    pub fn write_state_file_and_commit(&mut self) -> Result<()> {
-        if self.curr == self.next {
-            return Ok(());
-        }
-        // let data = serde_json::to_string_pretty(&self.next)?;
-        let data = serde_json::to_string(&self.next)?;
+    pub fn write_state_file_and_commit(&mut self, pretty_print: bool) -> Result<()> {
+        let data = if pretty_print {
+            serde_json::to_string_pretty(&self.next)?
+        } else {
+            serde_json::to_string(&self.next)?
+        };
         fs::write(&self.state_file_path, data)?;
         println!("WRITE {} (state cache)", self.state_file_path.display());
         self.commit();
@@ -237,104 +245,91 @@ impl StateManager {
     }
 }
 
-#[derive(Debug, Copy, Clone)]
-struct FileState {
-    modified: u64,
-    size: u64,
-    checksum: Checksum,
-}
-
-impl Serialize for FileState {
-    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
-    where
-        S: Serializer,
-    {
-        let mut tuple = serializer.serialize_tuple(3)?;
-        tuple.serialize_element(&self.modified)?;
-        tuple.serialize_element(&self.size)?;
-        tuple.serialize_element(&self.checksum)?;
-        tuple.end()
-    }
-}
-
-impl<'de> Deserialize<'de> for FileState {
-    fn deserialize<D>(deserializer: D) -> Result<Self, D::Error>
-    where
-        D: Deserializer<'de>,
-    {
-        struct FileStateVisitor;
-
-        impl<'de> Visitor<'de> for FileStateVisitor {
-            type Value = FileState;
-
-            fn expecting(&self, formatter: &mut std::fmt::Formatter) -> std::fmt::Result {
-                formatter.write_str("a tuple of [modified, size, checksum]")
-            }
-
-            fn visit_seq<A>(self, mut seq: A) -> Result<Self::Value, A::Error>
-            where
-                A: SeqAccess<'de>,
-            {
-                let modified = seq
-                    .next_element()?
-                    .ok_or_else(|| de::Error::invalid_length(0, &self))?;
-                let size = seq
-                    .next_element()?
-                    .ok_or_else(|| de::Error::invalid_length(1, &self))?;
-                let checksum = seq
-                    .next_element()?
-                    .ok_or_else(|| de::Error::invalid_length(2, &self))?;
-                Ok(FileState {
-                    modified,
-                    size,
-                    checksum,
-                })
-            }
-        }
-
-        deserializer.deserialize_tuple(3, FileStateVisitor)
-    }
+#[derive(Debug, Copy, Clone, Deserialize, Serialize)]
+#[serde(untagged)]
+enum FileState {
+    /// (mtime, size, checksum)
+    File(u64, u64, Checksum),
+    Dir,
 }
 
 impl PartialEq for FileState {
     fn eq(&self, other: &Self) -> bool {
-        self.checksum == other.checksum
+        match (self, other) {
+            (Self::File(_, _, checksum), Self::File(_, _, checksum_other)) => {
+                checksum == checksum_other
+            }
+            (Self::Dir, Self::Dir) => true,
+            _ => false,
+        }
     }
 }
 
 impl FileState {
     pub fn from_path<P: AsRef<Path>>(path: P) -> Result<Self> {
         let metadata = fs::metadata(&path)?;
-        Ok(Self {
-            modified: metadata.modified()?.duration_since(UNIX_EPOCH)?.as_secs(),
-            size: metadata.len(),
-            checksum: Checksum::from_file(path)?,
-        })
+        if metadata.is_dir() {
+            Ok(Self::Dir)
+        } else if metadata.is_file() {
+            Ok(Self::File(
+                metadata.modified()?.duration_since(UNIX_EPOCH)?.as_secs(),
+                metadata.len(),
+                Checksum::from_file(path)?,
+            ))
+        } else {
+            return Err(anyhow!("expected file or directory"));
+        }
+    }
+
+    pub fn is_file(&self) -> bool {
+        matches!(self, Self::File(..))
     }
 
     #[allow(dead_code)]
     pub fn has_changed<P: AsRef<Path>>(&self, path: P) -> Result<bool> {
         let metadata = fs::metadata(&path)?;
-        let size = metadata.len();
-        if self.size != size {
-            return Ok(true);
+        if metadata.is_dir() {
+            Ok(true)
+        } else if metadata.is_file() {
+            let &Self::File(_, s, c) = self else {
+                return Ok(true);
+            };
+            let size = metadata.len();
+            if s != size {
+                return Ok(true);
+            }
+            let checksum = Checksum::from_file(&path)?;
+            Ok(c != checksum)
+        } else {
+            Err(anyhow!("expected file or directory"))
         }
-        let checksum = Checksum::from_file(&path)?;
-        Ok(self.checksum != checksum)
     }
 
-    // Rough.
+    // TODO: describe the heuristic used to speed up file change checks
     pub fn fast_has_changed<P: AsRef<Path>>(&self, path: P) -> Result<bool> {
         let metadata = fs::metadata(&path)?;
-        let modified = metadata.modified()?.duration_since(UNIX_EPOCH)?.as_secs();
-        let size = metadata.len();
-        if self.modified == modified && self.size == size {
-            return Ok(false);
+        if metadata.is_dir() {
+            // for directories, we're just returning whether/not it exists.
+            match self {
+                Self::Dir => Ok(false),
+                Self::File(..) => Ok(true),
+            }
+        } else if metadata.is_file() {
+            let &Self::File(m, s, c) = self else {
+                return Ok(true);
+            };
+            let modified = metadata.modified()?.duration_since(UNIX_EPOCH)?.as_secs();
+            let size = metadata.len();
+            if m == modified && s == size {
+                return Ok(false);
+            }
+            if s != size {
+                return Ok(true);
+            }
+            let checksum = Checksum::from_file(&path)?;
+            Ok(c != checksum)
+        } else {
+            return Err(anyhow!("expected file or directory"));
         }
-        if self.size != size {
-            return Ok(true);
-        }
-        let checksum = Checksum::from_file(&path)?;
-        Ok(self.checksum != checksum)
     }
 }
