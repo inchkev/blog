@@ -203,7 +203,7 @@ impl Website {
             .get_or_init(|| ShortcodeManager::new(&self.template_path))
     }
 
-    pub fn bake(&mut self) -> Result<()> {
+    pub fn bake(&mut self, build_time: Option<&str>) -> Result<()> {
         // Ensure output directory exists
         fs::create_dir_all(&self.output_path)?;
 
@@ -395,7 +395,7 @@ impl Website {
             true
         };
         if should_rebuild_index {
-            let rendered_index = page_bundle.parbake(self.tera())?;
+            let rendered_index = page_bundle.parbake(self.tera(), build_time)?;
             let (rendered_index, _) = postprocess_html(
                 rendered_index,
                 &self.output_path,

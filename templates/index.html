@@ -37,3 +37,8 @@
 
 -->
 {% endblock comments %}
+{% block misc -%}
+{% if build_time %}
+<!-- last built: {{ build_time }} -->
+{%- endif %}
+{%- endblock misc %}

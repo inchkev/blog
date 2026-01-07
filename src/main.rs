@@ -1,6 +1,7 @@
 use std::time::Instant;
 
 use anyhow::Result;
+use chrono::Utc;
 use clap::Parser;
 
 mod checksum;
@@ -29,7 +30,7 @@ fn main() -> Result<()> {
     let start = Instant::now();
 
     let mut site = Website::init("", "config.toml", args)?;
-    site.bake()?;
+    site.bake(Some(&Utc::now().to_rfc2822()))?;
 
     println!("Done in {:.2?}", start.elapsed());
 

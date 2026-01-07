@@ -32,9 +32,10 @@ impl PageBundle {
     }
 
     /// Note: to ensure a consistent order of pages, call `sort_pages` first.
-    pub fn parbake(&self, tera: &Tera) -> Result<String> {
+    pub fn parbake(&self, tera: &Tera, build_time: Option<&str>) -> Result<String> {
         let mut context = Context::new();
         context.insert("pages", &self.pages);
+        context.insert("build_time", build_time.unwrap_or_default());
         Ok(tera.render("index.html", &context)?)
     }
 }
