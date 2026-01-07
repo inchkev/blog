@@ -234,8 +234,12 @@ impl StateManager {
         } else {
             serde_json::to_string(&self.next)?
         };
-        fs::write(&self.state_file_path, data)?;
-        println!("WRITE {} (state cache)", self.state_file_path.display());
+        fs::write(&self.state_file_path, &data)?;
+        println!(
+            "WRITE {} ({} bytes)",
+            self.state_file_path.display(),
+            data.len()
+        );
         self.commit();
         Ok(())
     }

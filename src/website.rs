@@ -22,6 +22,7 @@ use crate::page::{Page, PageFrontMatter};
 use crate::page_bundle::PageBundle;
 use crate::shortcode::ShortcodeManager;
 use crate::state::StateManager;
+use crate::Args;
 use crate::FULL_REBUILD_GLOBS;
 
 // Default directory/file names
@@ -135,15 +136,21 @@ pub struct Website {
     output_path: PathBuf,
     #[allow(dead_code)]
     theme_path: PathBuf,
-    config: Config,
-    state_manager: StateManager,
+    state_manager: Option<StateManager>,
     shortcode_manager: OnceCell<ShortcodeManager>,
     markdown_options: markdown::Options,
     tera: OnceCell<Tera>,
+    config: Config,
+    #[allow(dead_code)]
+    args: Args,
 }
 
 impl Website {
-    pub fn init<P: AsRef<Path>, Q: AsRef<Path>>(path: P, config_path: Q) -> Result<Self> {
+    pub fn init<P: AsRef<Path>, Q: AsRef<Path>>(
+        path: P,
+        config_path: Q,
+        args: Args,
+    ) -> Result<Self> {
         let base_path = path.as_ref().to_path_buf();
         let state_path = base_path.join(STATE_FILE);
         let content_path = base_path.join(CONTENT_DIR);
@@ -153,7 +160,12 @@ impl Website {
         let theme_path = base_path.join(THEME_DIR);
 
         let config = Config::from_file(config_path)?;
-        let state_manager = StateManager::from_file(&state_path)?;
+        let state_manager = if args.fresh {
+            println!("Ignoring state.json...");
+            None
+        } else {
+            Some(StateManager::from_file(&state_path)?)
+        };
 
         let markdown_options = markdown::Options {
             parse: ParseOptions::gfm(),
@@ -173,11 +185,12 @@ impl Website {
             static_path,
             output_path,
             theme_path,
-            config,
             state_manager,
             shortcode_manager: OnceCell::new(),
             markdown_options,
             tera: OnceCell::new(),
+            config,
+            args,
         })
     }
 
@@ -206,11 +219,12 @@ impl Website {
                     .filter_map(|p| p.ok().filter(|p| p.is_file()))
             })
             .collect();
-        let should_full_rebuild = self
-            .state_manager
-            .fast_set_next_bulk_and_check_if_changed(full_rebuild_paths)?;
+        let should_full_rebuild = match &mut self.state_manager {
+            Some(sm) => sm.fast_set_next_bulk_and_check_if_changed(full_rebuild_paths)?,
+            None => true,
+        };
         if should_full_rebuild {
-            println!("Full-rebuild files changed, regenerating all pages...");
+            println!("Full rebuild required...");
         }
 
         // Collect markdown files and sort by creation time (newest first)
@@ -263,10 +277,14 @@ impl Website {
             let page_slug = page.slug();
 
             let file_checksum = Checksum::from_data(&file_contents);
-            self.state_manager
-                .set_checksum(page_slug.to_string(), file_checksum);
+            let should_rebuild = if let Some(sm) = &mut self.state_manager {
+                sm.set_checksum(page_slug.to_string(), file_checksum);
+                sm.should_rebuild(page_slug)
+            } else {
+                true
+            };
             // Skip if page itself does not need to be rebuilt
-            if !self.state_manager.should_rebuild(page_slug) {
+            if !should_rebuild {
                 page_bundle.add_page(page);
                 // println!("skipped (no changes)");
                 continue;
@@ -298,7 +316,9 @@ impl Website {
                     "cannot render shortcodes in {}",
                     path.as_os_str().to_string_lossy()
                 );
-                self.state_manager.unset_checksum(&page_slug);
+                if let Some(sm) = &mut self.state_manager {
+                    sm.unset_checksum(page_slug);
+                }
                 continue;
             };
             // 2. Convert processed markdown to HTML. Because `markdown-rs`
@@ -345,23 +365,30 @@ impl Website {
         }
 
         // Delete stale page directories
-        for slug in &self.state_manager.get_slugs_to_delete() {
-            let delete_path = self.output_path.join(slug);
-            if let Err(e) = fs::remove_dir_all(&delete_path) {
-                eprintln!(
-                    "cannot delete dir {}/:\n{e}",
-                    delete_path.as_os_str().to_string_lossy()
-                );
-                continue;
+        if let Some(sm) = &self.state_manager {
+            for slug in &sm.get_slugs_to_delete() {
+                let delete_path = self.output_path.join(slug);
+                if let Err(e) = fs::remove_dir_all(&delete_path) {
+                    eprintln!(
+                        "cannot delete dir {}/:\n{e}",
+                        delete_path.as_os_str().to_string_lossy()
+                    );
+                    continue;
+                }
+                println!("DELETE {}/", delete_path.as_os_str().to_string_lossy());
             }
-            println!("DELETE {}/", delete_path.as_os_str().to_string_lossy());
         }
 
         // Build home page (index).
         page_bundle.sort_pages();
         let index_checksum = Checksum::from_data(&serde_json::to_string(&page_bundle.pages())?);
-        self.state_manager.set_index_checksum(index_checksum);
-        if self.state_manager.should_rebuild_index() {
+        let should_rebuild_index = if let Some(sm) = &mut self.state_manager {
+            sm.set_index_checksum(index_checksum);
+            sm.should_rebuild_index()
+        } else {
+            true
+        };
+        if should_rebuild_index {
             let rendered_index = page_bundle.parbake(self.tera())?;
             let (rendered_index, _) = postprocess_html(
                 rendered_index,
@@ -386,12 +413,9 @@ impl Website {
         self.copy_static_files()?;
 
         // Save new state file
-        println!(
-            "pretty print state cache: {}",
-            self.config.pretty_print_state_cache
-        );
-        self.state_manager
-            .write_state_file_and_commit(self.config.pretty_print_state_cache)?;
+        if let Some(sm) = &mut self.state_manager {
+            sm.write_state_file_and_commit(self.config.pretty_print_state_cache)?;
+        }
 
         // load_syntax_theme("gruvbox (Light) (Hard)", &self.theme_path, &self.output_path)?;
 
@@ -437,22 +461,22 @@ impl Website {
         self._copy_static_dir_recursive(Path::new(""), &output_path)?;
 
         // delete stale static files
-        let stale_files = self
-            .state_manager
-            .get_stale_static_files_in_order_of_deletion();
-        for (stale_file, is_file) in stale_files {
-            let stale_path = output_path.join(stale_file);
-            if is_file {
-                if let Err(e) = fs::remove_file(&stale_path) {
-                    eprintln!("cannot delete stale file {}:\n{e}", stale_file.display());
+        if let Some(sm) = &self.state_manager {
+            let stale_files = sm.get_stale_static_files_in_order_of_deletion();
+            for (stale_file, is_file) in stale_files {
+                let stale_path = output_path.join(stale_file);
+                if is_file {
+                    if let Err(e) = fs::remove_file(&stale_path) {
+                        eprintln!("cannot delete stale file {}:\n{e}", stale_file.display());
+                    } else {
+                        println!("DELETE [static file] {}", stale_file.display());
+                    }
                 } else {
-                    println!("DELETE [static file] {}", stale_file.display());
-                }
-            } else {
-                // empty directory (unless theres a page with the same name)
-                // try to delete the directory
-                if fs::remove_dir(&stale_path).is_ok() {
-                    println!("DELETE [static dir ] {}/", stale_file.display());
+                    // empty directory (unless theres a page with the same name)
+                    // try to delete the directory
+                    if fs::remove_dir(&stale_path).is_ok() {
+                        println!("DELETE [static dir ] {}/", stale_file.display());
+                    }
                 }
             }
         }
@@ -505,12 +529,13 @@ impl Website {
 
             if file_type.is_file() {
                 // Copy regular file (overwrites existing)
-                let has_changed = self
-                    .state_manager
-                    .fast_set_next_static_file_state_and_check_if_changed(
+                let has_changed = match &mut self.state_manager {
+                    Some(sm) => sm.fast_set_next_static_file_state_and_check_if_changed(
                         &entry_path,
                         entry_relative_path,
-                    )?;
+                    )?,
+                    None => true,
+                };
                 if !has_changed {
                     continue;
                 }
@@ -528,12 +553,13 @@ impl Website {
                 }
             } else if file_type.is_dir() {
                 // Create destination directory if needed
-                let does_not_exist = self
-                    .state_manager
-                    .fast_set_next_static_file_state_and_check_if_changed(
+                let does_not_exist = match &mut self.state_manager {
+                    Some(sm) => sm.fast_set_next_static_file_state_and_check_if_changed(
                         &entry_path,
                         entry_relative_path.clone(),
-                    )?;
+                    )?,
+                    None => true,
+                };
                 if does_not_exist {
                     // NOTE: a directory could be marked as removed according
                     // to its updated state in the static map, but it could
