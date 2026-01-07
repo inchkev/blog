@@ -31,7 +31,7 @@ const TEMPLATE_DIR: &str = "templates";
 const STATIC_DIR: &str = "static";
 const OUTPUT_DIR: &str = "website";
 const THEME_DIR: &str = "themes";
-const STATE_FILE: &str = "state.json";
+const STATE_CACHE_FILE: &str = "state-cache.json";
 
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
     use gray_matter::engine::YAML;
@@ -152,7 +152,7 @@ impl Website {
         args: Args,
     ) -> Result<Self> {
         let base_path = path.as_ref().to_path_buf();
-        let state_path = base_path.join(STATE_FILE);
+        let state_path = base_path.join(STATE_CACHE_FILE);
         let content_path = base_path.join(CONTENT_DIR);
         let template_path = base_path.join(TEMPLATE_DIR);
         let static_path = base_path.join(STATIC_DIR);
@@ -161,7 +161,7 @@ impl Website {
 
         let config = Config::from_file(config_path)?;
         let state_manager = if args.fresh {
-            println!("Ignoring state.json...");
+            println!("Ignoring state cache...");
             None
         } else {
             Some(StateManager::from_file(&state_path)?)
@@ -344,6 +344,12 @@ impl Website {
                     continue;
                 }
             };
+            for copied_image in &copied_images {
+                println!(
+                    "  COPY {}",
+                    page_dir.join(copied_image).as_os_str().to_string_lossy()
+                );
+            }
             // 4. Create the index.html file!
             let output_path = page_dir.join("index.html");
             let mut output_file = File::create(&output_path)?;
@@ -571,6 +577,7 @@ impl Website {
                         continue;
                     }
                 }
+                // TODO: optimization: if the directory doesn't exist,
                 // Recurse into subdirectory
                 self._copy_static_dir_recursive(&entry_relative_path, &dest_path)?;
             }

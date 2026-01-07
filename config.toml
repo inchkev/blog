@@ -4,5 +4,5 @@ minify_css = false
 # When set to "true", generates draft pages as well.
 include_drafts = false
 
-# When set to "true", pretty-prints the JSON string in state.json.
+# When set to "true", pretty-prints the JSON string in state-cache.json.
 pretty_print_state_cache = false

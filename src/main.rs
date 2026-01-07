@@ -16,7 +16,7 @@ use website::Website;
 
 #[derive(Parser)]
 pub struct Args {
-    /// Fresh build: ignore state.json (don't read or write)
+    /// Fresh build: ignore state cache (do not read or write)
     #[arg(long)]
     fresh: bool,
 }

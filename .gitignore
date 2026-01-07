@@ -2,4 +2,4 @@ target
 .DS_Store
 
 website
-state.json
+state-cache.json
