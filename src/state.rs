@@ -281,7 +281,7 @@ impl FileState {
                 Checksum::from_file(path)?,
             ))
         } else {
-            return Err(anyhow!("expected file or directory"));
+            Err(anyhow!("expected file or directory"))
         }
     }
 
@@ -333,7 +333,7 @@ impl FileState {
             let checksum = Checksum::from_file(&path)?;
             Ok(c != checksum)
         } else {
-            return Err(anyhow!("expected file or directory"));
+            Err(anyhow!("expected file or directory"))
         }
     }
 }
