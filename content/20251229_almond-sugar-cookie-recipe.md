@@ -26,7 +26,7 @@ I adapted this recipe primarily from Redditor _CatfromLongIsland_’s recipe for
 - 1 cup plus 2 tbsp granulated sugar
 - 1 large egg
 - 1 large egg white
-- 1 heaping tsp (5g) almond extract
+- 5g (1 heaping tsp) almond extract
 - Turbinado or raw cane sugar, for sprinkling
 - Flaky sea salt, at the end
 
