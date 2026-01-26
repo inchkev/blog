@@ -313,3 +313,10 @@ a[data-footnote-ref]::after {
   flex-direction: column;
   align-items: center;
 }
+
+/* PRINTING */
+@media print {
+  figure, img, footer {
+    display: none !important;
+  }
+}
