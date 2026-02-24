@@ -59,7 +59,7 @@ body {
   gap: 0.3rem;
   max-width: 45rem;
   padding: 0.5em;
-  border: 2px dotted var(--green);
+  border: 2px dotted #ffb18b;
   border-radius: 1.4rem;
 }
 header, footer, .posts, .article {
