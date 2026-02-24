@@ -4,14 +4,14 @@ date: 2026-02-23
 draft: false
 ---
 
-Happy year of the horse. This is for lovers of savory cocktails :)
+Happy year of the horse. This is for lovers of savory cocktails (me)
 
 - 2 oz toasted sesame oil washed gin
 - ½ oz shochu
 - ½ oz dry vermouth
 - ½ oz ginger peppercorn syrup
 - ½ oz Zhenjiang vinegar (Chinese black vinegar)
-- 1 scant barspoon (about 4g) red onion brine
+- 1 scant barspoon (about 4g) pickled red onion brine
 - 2 drops soy sauce
 - garnish: toasted sesame oil
 
@@ -21,6 +21,7 @@ Stir in ice until chilled, or add ¾ oz water if pre-chilling/batching. Serve in
 
 - **Sesame washed gin**: I did 1:10 sesame oil to gin, shook it, then froze it after letting it sit for about 30 minutes. You can probably use way less sesame oil if you let it sit for longer before freezing but I was in a hurry.
 - **Ginger peppercorn syrup**: I followed [this recipe](https://www.herbco.com/s-2237-a-passion-for-pepper-peppercorn-syrup.aspx) for peppercorn syrup (it uses both black and Sichuan peppercorns), and added about two tablespoons of fresh grated ginger before boiling. I also let the peppercorns sit in the syrup for way longer to get a stronger flavor.
+- **Pickled red onion brine**: Any liquid from pickling red onions should do. What I had on hand was a batch following J. Kenji López-Alt’s recipe[^1] with the sugar halved (½ cup) and the jalapeño omitted.
 
 ## What I used
 
@@ -28,3 +29,5 @@ Stir in ice until chilled, or add ¾ oz water if pre-chilling/batching. Serve in
 - Nankai Shochu
 - Dolin Dry Vermouth
 - Lee Kum Kee Premium Soy Sauce
+
+[^1]: https://www.seriouseats.com/pickled-red-onions [Archived](https://archive.ph/nU5B4)
