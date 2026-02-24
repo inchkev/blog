@@ -15,7 +15,7 @@ Happy year of the horse. This is for lovers of savory cocktails (me)
 - 2 drops soy sauce
 - garnish: toasted sesame oil
 
-Stir in ice until chilled, or add ¾ oz water if pre-chilling/batching. Serve in a stemmed glass or a small bowl. Garnish with a couple drops of toasted sesame oil.
+Stir with ice until chilled, or add ¾ oz water if pre-chilling/batching. Serve in a stemmed glass or a small bowl. Garnish with a couple drops of toasted sesame oil.
 
 ## Appendix
 
