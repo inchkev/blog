@@ -25,15 +25,15 @@
         windowfull.exit();
       }, { once: true });
 
-      scrollHandler = () => windowfull.exit();
-      window.addEventListener('scroll', scrollHandler, { once: true });
+      // scrollHandler = () => windowfull.exit();
+      // window.addEventListener('scroll', scrollHandler, { once: true });
     },
 
     exit() {
       if (!fullwindowDiv) return;
       fullwindowDiv.remove();
       fullwindowDiv = undefined;
-      window.removeEventListener('scroll', scrollHandler);
+      // window.removeEventListener('scroll', scrollHandler);
     },
 
     toggle(element) {
