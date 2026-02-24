@@ -20,7 +20,7 @@ Stir in ice until chilled, or add ¾ oz water if pre-chilling/batching. Serve in
 ## Appendix
 
 - **Sesame washed gin**: I did 1:10 sesame oil to gin, shook it, then froze it after letting it sit for about 30 minutes. You can probably use way less sesame oil if you let it sit for longer before freezing but I was in a hurry.
-- **Ginger peppercorn syrup**: I followed [this recipe](https://www.herbco.com/s-2237-a-passion-for-pepper-peppercorn-syrup.aspx) for peppercorn syrup (it uses both black and Sichuan peppercorn), and added about two tablespoons of fresh grated ginger before boiling. I also let the peppercorns sit in the syrup for way longer to get a stronger flavor.
+- **Ginger peppercorn syrup**: I followed [this recipe](https://www.herbco.com/s-2237-a-passion-for-pepper-peppercorn-syrup.aspx) for peppercorn syrup (it uses both black and Sichuan peppercorns), and added about two tablespoons of fresh grated ginger before boiling. I also let the peppercorns sit in the syrup for way longer to get a stronger flavor.
 
 ## What I used
 
