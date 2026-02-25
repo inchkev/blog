@@ -1,6 +1,24 @@
 {% extends "header.html" %}
 {% block style %}
   <link rel="stylesheet" href="/style.css">
+  <style>
+  #image-credit {
+    color: #ffffffeb;
+    font-size: 0.75rem;
+    line-height: 1rem;
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: flex-end;
+  }
+  #image-credit p {
+    padding: 1.5em;
+    margin: 0;
+    text-align: right;
+  }
+</style>
 {% endblock style %}
 {% block content -%}
       <header style="display: flex; justify-content: space-between;">
@@ -16,7 +34,7 @@
       {%- endfor %}
       </div>
 
-      <div id="image-credit" style="color: #ffffffeb; font-size: 0.75rem; position: fixed; bottom: 1rem; right: 1.25rem;">
+      <div id="image-credit">
         <p>november 26, 2025 in maryland.. the cat's name is coco.. © kevin chen 2025</a></p>
       </div>
 {%- endblock content %}

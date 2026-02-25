@@ -148,9 +148,10 @@ a {
   text-decoration-thickness: 1px;
   text-decoration-style: dotted;
   text-underline-offset: 0.2rem;
-  word-break: break-all;
   overflow-wrap: break-word;
-
+}
+.footnotes a {
+  word-break: break-all;
 }
 a:link, a:visited {
   color: var(--hyperlink);
