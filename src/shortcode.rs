@@ -14,7 +14,16 @@ static SHORTCODE_REGEX: LazyLock<Regex> =
 const SHORTCODE_DIR: &str = "_shortcodes";
 
 struct Shortcode {
-    template: String,
+    tera: Tera,
+}
+
+impl Shortcode {
+    fn new(content: &str) -> tera::Result<Self> {
+        let mut tera = Tera::default();
+        tera.add_raw_template("main", content)?;
+        tera.autoescape_on(vec![]);
+        Ok(Shortcode { tera })
+    }
 }
 
 impl tera::Function for Shortcode {
@@ -23,8 +32,7 @@ impl tera::Function for Shortcode {
         for (k, v) in args {
             context.insert(k, v);
         }
-        // Render using one_off - doesn't need a Tera instance
-        let html = Tera::one_off(&self.template, &context, false)?;
+        let html = self.tera.render("main", &context)?;
         Ok(tera::Value::String(html))
     }
 }
@@ -59,9 +67,12 @@ impl ShortcodeManager {
             };
 
             let name = path.file_stem().unwrap().to_string_lossy();
-            // TODO: validate shortcode templates?
-            let shortcode = Shortcode {
-                template: content.trim().to_string(),
+            let shortcode = match Shortcode::new(content.trim()) {
+                Ok(s) => s,
+                Err(e) => {
+                    eprintln!("cannot parse shortcode template {}: {}", path.display(), e);
+                    continue;
+                }
             };
             tera.register_function(&name, shortcode);
             shortcode_names.push(name.to_string());

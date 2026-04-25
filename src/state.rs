@@ -136,7 +136,7 @@ impl StateManager {
                 let (new_file_state, has_changed_) =
                     Self::fast_get_new_file_state_and_check_if_changed(&path, None, curr_map)
                         .ok()?;
-                has_changed = has_changed_;
+                has_changed |= has_changed_;
                 Some((path, new_file_state))
             })
             .collect::<HashMap<PathBuf, FileState>>();

@@ -31,6 +31,9 @@ const OUTPUT_DIR: &str = "website";
 const THEME_DIR: &str = "themes";
 const STATE_CACHE_FILE: &str = "state-cache.json";
 
+static BODY_START_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"<body[^>]*>\s*").unwrap());
+static BODY_END_RE: LazyLock<Regex> = LazyLock::new(|| Regex::new(r"\s*</body>").unwrap());
+
 fn yaml_matter() -> &'static gray_matter::Matter<gray_matter::engine::YAML> {
     use gray_matter::engine::YAML;
     use gray_matter::Matter;
@@ -93,14 +96,11 @@ fn postprocess_html<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
 ) -> Result<(String, Vec<OsString>)> {
     // Find body content boundaries to avoid parsing the full document
     // Exclude leading/trailing whitespace from parsing since kuchikiki/html5ever
-    //drops them
-    let body_start_re = Regex::new(r"<body[^>]*>\s*").unwrap();
-    let body_end_re = Regex::new(r"\s*</body>").unwrap();
-
-    let Some(start_match) = body_start_re.find(&html) else {
+    // drops them
+    let Some(start_match) = BODY_START_RE.find(&html) else {
         return Ok((html, vec![]));
     };
-    let Some(end_match) = body_end_re.find(&html[start_match.end()..]) else {
+    let Some(end_match) = BODY_END_RE.find(&html[start_match.end()..]) else {
         return Ok((html, vec![]));
     };
     let start = start_match.end();
