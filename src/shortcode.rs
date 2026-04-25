@@ -40,7 +40,6 @@ impl ShortcodeManager {
         let shortcode_paths: Vec<_> =
             glob(shortcode_dir_path.join("*.html").to_string_lossy().as_ref())
                 .unwrap()
-                .into_iter()
                 .flatten()
                 .collect();
         if shortcode_paths.is_empty() {

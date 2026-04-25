@@ -33,7 +33,7 @@ impl WebsiteState {
         match fs::read_to_string(&path) {
             Ok(json_data) => Ok(serde_json::from_str::<WebsiteState>(&json_data)?),
             Err(e) if e.kind() == std::io::ErrorKind::NotFound => Ok(WebsiteState::default()),
-            Err(e) => return Err(e.into()),
+            Err(e) => Err(e.into()),
         }
     }
 }
@@ -67,7 +67,7 @@ impl StateManager {
     /// Returns whether or not the page should be rebuilt, when:
     /// - A full rebuild is required, OR
     /// - The page is new (not in previous state), OR
-    /// - The page's content checksum page_map_next.
+    /// - The page's content checksum `page_map_next`.
     ///
     /// Must be called after `set_checksum` for the given slug.
     pub fn should_rebuild(&self, slug: &str) -> bool {
@@ -110,20 +110,17 @@ impl StateManager {
         // fix this key path pathbuf stuff
         let key = key.unwrap_or_else(|| path.to_path_buf());
 
-        let new_file_state = match curr_map.get(&key) {
-            Some(curr_file_state) => {
-                if curr_file_state.fast_has_changed(path)? {
-                    has_changed = true;
-                    println!("detected file change (fast): {}", path.display());
-                    FileState::from_path(path)?
-                } else {
-                    *curr_file_state
-                }
-            }
-            None => {
+        let new_file_state = if let Some(curr_file_state) = curr_map.get(&key) {
+            if curr_file_state.fast_has_changed(path)? {
                 has_changed = true;
+                println!("detected file change (fast): {}", path.display());
                 FileState::from_path(path)?
+            } else {
+                *curr_file_state
             }
+        } else {
+            has_changed = true;
+            FileState::from_path(path)?
         };
         Ok((new_file_state, has_changed))
     }
@@ -131,7 +128,7 @@ impl StateManager {
     fn fast_get_new_file_state_map_and_check_if_changed(
         paths: Vec<PathBuf>,
         curr_map: &HashMap<PathBuf, FileState>,
-    ) -> Result<(HashMap<PathBuf, FileState>, bool)> {
+    ) -> (HashMap<PathBuf, FileState>, bool) {
         let mut has_changed = false;
         let new_map = paths
             .into_iter()
@@ -143,14 +140,14 @@ impl StateManager {
                 Some((path, new_file_state))
             })
             .collect::<HashMap<PathBuf, FileState>>();
-        Ok((new_map, has_changed))
+        (new_map, has_changed)
     }
 
-    pub fn fast_set_next_bulk_and_check_if_changed(&mut self, paths: Vec<PathBuf>) -> Result<bool> {
+    pub fn fast_set_next_bulk_and_check_if_changed(&mut self, paths: Vec<PathBuf>) -> bool {
         let (next_bulk_map, has_changed) =
-            Self::fast_get_new_file_state_map_and_check_if_changed(paths, &self.curr.bulk_map)?;
+            Self::fast_get_new_file_state_map_and_check_if_changed(paths, &self.curr.bulk_map);
         self.next.bulk_map = next_bulk_map;
-        Ok(has_changed)
+        has_changed
     }
 
     pub fn fast_set_next_static_file_state_and_check_if_changed(
@@ -167,7 +164,7 @@ impl StateManager {
         Ok(has_changed)
     }
 
-    /// Returns (path, is_file) tuples in descending path depth order, i.e.
+    /// Returns (`path`, `is_file`) tuples in descending path depth order, i.e.
     /// the order that they can safely be deleted.
     pub fn get_stale_static_files_in_order_of_deletion(&self) -> Vec<(&PathBuf, bool)> {
         if self.curr.static_map.is_empty() {
@@ -178,7 +175,6 @@ impl StateManager {
         // Slugs in the old state but not in the current run = deleted pages
         let mut stale_files = map_keys
             .difference(&changed_keys)
-            .into_iter()
             .map(|&k| (k, self.curr.static_map.get(k).unwrap().is_file()))
             .collect::<Vec<_>>();
         // Sort by path depth, deepest first
@@ -187,7 +183,7 @@ impl StateManager {
     }
 
     #[allow(dead_code)]
-    pub fn set_bulk(&mut self, paths: Vec<PathBuf>) -> Result<()> {
+    pub fn set_bulk(&mut self, paths: &[PathBuf]) {
         let bulk_map = paths
             .par_iter()
             .filter_map(|path| FileState::from_path(path).ok().map(|s| (path.clone(), s)))
@@ -196,17 +192,13 @@ impl StateManager {
                 m.insert(s.0.clone(), s.1);
                 m
             })
-            .reduce(
-                || HashMap::new(),
-                |m1, m2| {
-                    m2.iter().fold(m1, |mut acc, (k, vs)| {
-                        acc.entry(k.clone()).or_insert(*vs);
-                        acc
-                    })
-                },
-            );
+            .reduce(HashMap::new, |m1, m2| {
+                m2.iter().fold(m1, |mut acc, (k, vs)| {
+                    acc.entry(k.clone()).or_insert(*vs);
+                    acc
+                })
+            });
         self.next.bulk_map = bulk_map;
-        Ok(())
     }
 
     /// Returns page slugs that should be deleted, i.e. ones that existed

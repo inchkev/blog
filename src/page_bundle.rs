@@ -4,15 +4,9 @@ use tera::{Context, Tera};
 
 use crate::page::{Page, PartialPage};
 
-#[derive(Debug, Serialize)]
+#[derive(Default, Debug, Serialize)]
 pub struct PageBundle {
     pages: Vec<PartialPage>,
-}
-
-impl Default for PageBundle {
-    fn default() -> Self {
-        Self { pages: Vec::new() }
-    }
 }
 
 impl PageBundle {

@@ -17,13 +17,11 @@ use tera::{Context, Tera};
 
 use crate::checksum::Checksum;
 use crate::config::Config;
-use crate::html;
 use crate::page::{Page, PageFrontMatter};
 use crate::page_bundle::PageBundle;
 use crate::shortcode::ShortcodeManager;
 use crate::state::StateManager;
-use crate::Args;
-use crate::FULL_REBUILD_GLOBS;
+use crate::{html, Args, FULL_REBUILD_GLOBS};
 
 // Default directory/file names
 const CONTENT_DIR: &str = "content";
@@ -86,7 +84,7 @@ fn markdown_to_body_html(markdown: &str, options: &markdown::Options) -> (String
 /// - wraps images with figure tags
 /// - updates references section
 ///
-/// Returns (processed_html, copied_images).
+/// Returns (processed html, copied images).
 fn postprocess_html<P: AsRef<Path>, Q: AsRef<Path>, R: AsRef<Path>>(
     html: String,
     page_dir: P,
@@ -213,14 +211,14 @@ impl Website {
         let full_rebuild_paths: Vec<PathBuf> = FULL_REBUILD_GLOBS
             .iter()
             .flat_map(|pattern| {
-                glob(pattern.as_ref())
+                glob(pattern)
                     .into_iter()
                     .flatten()
                     .filter_map(|p| p.ok().filter(|p| p.is_file()))
             })
             .collect();
         let should_full_rebuild = match &mut self.state_manager {
-            Some(sm) => sm.fast_set_next_bulk_and_check_if_changed(full_rebuild_paths)?,
+            Some(sm) => sm.fast_set_next_bulk_and_check_if_changed(full_rebuild_paths),
             None => true,
         };
         if should_full_rebuild {
@@ -231,7 +229,6 @@ impl Website {
         let mut content_paths: Vec<_> =
             glob(self.content_path.join("*.md").to_string_lossy().as_ref())
                 .unwrap()
-                .into_iter()
                 .filter_map(std::result::Result::ok)
                 .collect();
         content_paths.sort_by_key(|p| Reverse(p.metadata().ok().and_then(|m| m.created().ok())));
@@ -294,7 +291,7 @@ impl Website {
             let page_dir = self.output_path.join(page_slug);
             let existing_files: HashSet<OsString> = match fs::read_dir(&page_dir) {
                 Ok(entries) => entries
-                    .filter_map(|entry| entry.ok())
+                    .filter_map(std::result::Result::ok)
                     .map(|entry| entry.file_name())
                     .filter(|name| name != "index.html")
                     .collect(),
@@ -464,7 +461,7 @@ impl Website {
             return Ok(());
         }
         let output_path = self.output_path.clone();
-        self._copy_static_dir_recursive(Path::new(""), &output_path)?;
+        self.copy_static_dir_recursive(Path::new(""), &output_path)?;
 
         // delete stale static files
         if let Some(sm) = &self.state_manager {
@@ -495,7 +492,7 @@ impl Website {
     /// - `root_path`: root static directory to copy from
     /// - `relative_path`: source path, relative to `static_dir`
     /// - `dest`: destination directory to copy to
-    fn _copy_static_dir_recursive(&mut self, src_relative_path: &Path, dest: &Path) -> Result<()> {
+    fn copy_static_dir_recursive(&mut self, src_relative_path: &Path, dest: &Path) -> Result<()> {
         let dir_path = self.static_path.join(src_relative_path);
         let entries = match fs::read_dir(&dir_path) {
             Ok(e) => e,
@@ -579,7 +576,7 @@ impl Website {
                 }
                 // TODO: optimization: if the directory doesn't exist,
                 // Recurse into subdirectory
-                self._copy_static_dir_recursive(&entry_relative_path, &dest_path)?;
+                self.copy_static_dir_recursive(&entry_relative_path, &dest_path)?;
             }
         }
 
