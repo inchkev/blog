@@ -40,7 +40,7 @@ I adapted this recipe primarily from Redditor _CatfromLongIsland_’s recipe for
 
 The cookies are best enjoyed day-of, once they have fully cooled and edges remain crispy. Store cookies in an loosely sealed tin/container at room temp with a paper towel. If you store them in an airtight container, they will last up to a week but the edges will lose their crispiness (they will still taste great).
 
-![16 delicious almond sugar cookies, on a wire rack, on a granite countertop](IMG_7762.JPG "Sorry for the bad lighting")
+![16 delicious almond sugar cookies, on a wire rack, on a granite countertop](IMG_7762.JPG "Excuse the lighting")
 
 ## Notes
 
