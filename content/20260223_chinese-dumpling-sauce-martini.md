@@ -3,7 +3,6 @@ title: Chinese dumpling sauce martini
 date: 2026-02-23
 draft: false
 ---
-
 Happy year of the horse. When my family makes dumplings, we prepare a simple dipping sauce of soy sauce, black vinegar, and toasted sesame oil. This cocktail is meant to remind you of that. It’s slightly sweetened to balance out the umami from the soy sauce and acid from the vinegar. It was inspired by the Benihana House Salad, a cocktail from [Little Pearl](https://www.littlepearldc.com/) in DC, and a recent visit to [Double Chicken Please](https://doublechickenplease.com/) in NYC.
 
 - 2 oz toasted sesame oil washed gin
