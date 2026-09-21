@@ -34,6 +34,6 @@ Shake with ice, strain, serve in a chilled martini glass. Garnish with a fennel 
 	- By weight, add 1% salt, 1.5% shiro/white miso, 0.25% light soy sauce (white soy sauce also works).
 	- Mash until a lot of liquid has been released.
 	- Add additional salt, msg, and red wine vinegar to balance. Add only small amounts at a time. This is only really needed when the tomatoes you are using are not the ripest.
+	- Freeze.
+	- Let defrost and strain over a cheese cloth.
 - I used [Bordiga Bianco Vermouth](https://www.bittersandbottles.com/products/bordiga-bianco-vermouth), it is so good.
-
-[^1]: https://www.seriouseats.com/pickled-red-onions [Archived](https://archive.ph/nU5B4)
