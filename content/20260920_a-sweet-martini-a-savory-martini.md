@@ -27,6 +27,8 @@ Shake with ice, strain, serve in a chilled martini glass. Garnish with a fennel 
 - 0.6 oz [Veso Tomato Vermouth](https://drinkveso.com/products/tomato-vermouth?variant=46942543708317)
 - 0.4 oz vermouth bianco
 
+Stir over ice, strain, serve in a chilled martini glass. Garnish with a fresh or pickled cherry tomato.
+
 ### Details
 
 - **Tomato water**: Use the ripest in-season tomatoes you can find. Prefer ones with high sugar and glutamate content, such as early girls, heirlooms, or sweet cherry tomatoes.
