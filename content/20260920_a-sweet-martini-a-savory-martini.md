@@ -18,7 +18,7 @@ Shake with ice, strain, serve in a chilled martini glass. Garnish with a fennel 
 
 - **Fennel infused gin**: I followed [this recipe](https://www.liquor.com/fennelcello-recipe-5120764) for “fennelcello” but I used gin (hendrick’s) instead of vodka and the final result didn’t taste very strongly of fennel.
 - **Fennel syrup**: I added an equal weight of sugar to a finely diced fennel bulb including the fronds. Let that sit overnight, then strain through a cheese cloth. (Caveat: this didn’t give the intense anise-y fennel flavor I was looking for. I would try a simmered syrup with star anise.)
-- I need to try Italian finocchietto liquer or try [making my own](https://www.cucicucicoo.com/2017/07/homemade-wild-fennel-liqueur-recipe-finocchietto-digestif/).
+- Next steps: experiment with using [Arak](<https://en.wikipedia.org/wiki/Arak_(drink)>) or Italian finocchietto liquer (or try [making my own](https://www.cucicucicoo.com/2017/07/homemade-wild-fennel-liqueur-recipe-finocchietto-digestif/)).
 
 ## Savory: Tomato martini
 
